@@ -1,5 +1,6 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { useNuxtApp } from '#app';
 import UpiLogo from '~/components/UpiLogo.vue';
 import BitcoinLogo from '~/components/BitcoinLogo.vue';
 
@@ -10,36 +11,41 @@ const timeLeft = ref(0);
 const receiptUploaded = ref(false);
 const errorMessage = ref('');
 
-// Mock data for available orders
-const availableOrders = reactive([
-  {
-    id: 'ORD-ABC123',
-    amount: 5000,
-    upiId: 'example@okaxis',
-    satAmount: 500000,
-    serviceFee: 10000,
-    profit: 5000,
-    timeCreated: new Date(Date.now() - 120000).toISOString()
-  },
-  {
-    id: 'ORD-DEF456',
-    amount: 2000,
-    upiId: 'test@okbizaxis',
-    satAmount: 200000,
-    serviceFee: 4000,
-    profit: 2000,
-    timeCreated: new Date(Date.now() - 300000).toISOString()
-  },
-  {
-    id: 'ORD-GHI789',
-    amount: 10000,
-    upiId: 'merchant@okhdfcbank',
-    satAmount: 1000000,
-    serviceFee: 20000,
-    profit: 10000,
-    timeCreated: new Date(Date.now() - 60000).toISOString()
+// Real-time orders from socket connection
+const availableOrders = reactive([]);
+const loading = ref(true);
+const { $socket } = useNuxtApp();
+
+// Connect to socket for real-time updates
+onMounted(() => {
+  // Subscribe to order updates
+  useNuxtApp().hook('socket:orders-update', (data) => {
+    if (data && Array.isArray(data)) {
+      // Replace or update available orders
+      availableOrders.splice(0, availableOrders.length, ...data);
+      loading.value = false;
+    }
+  });
+  
+  // Signal that we're an earner
+  if ($socket && $socket.connected) {
+    $socket.emit('register-earner');
   }
-]);
+  
+  // Fallback if socket doesn't receive data in 3 seconds
+  setTimeout(() => {
+    if (loading.value) {
+      loading.value = false;
+    }
+  }, 3000);
+});
+
+onUnmounted(() => {
+  // Unregister as earner when leaving page
+  if ($socket && $socket.connected) {
+    $socket.emit('unregister-earner');
+  }
+});
 
 // Order timer countdown
 let timerInterval = null;
@@ -128,9 +134,24 @@ function uploadReceipt(event) {
           Process UPI payments and earn Bitcoin. First-click-first-serve basis.
         </p>
         
-        <div v-if="availableOrders.length === 0" class="text-center py-8 text-gray-500">
+        <div v-if="loading" class="py-8">
+          <div class="flex flex-col items-center justify-center space-y-4">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-upi-green"></div>
+            <p class="text-gray-600">Loading available orders...</p>
+          </div>
+        </div>
+        
+        <div v-else-if="availableOrders.length === 0" class="text-center py-8 text-gray-500">
+          <div class="lightning-gradient text-white inline-flex items-center p-3 rounded-full mb-4 shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
           <p>No payment requests available at the moment.</p>
           <p class="text-sm mt-2">Check back soon for new opportunities to earn Bitcoin!</p>
+          <button @click="$socket.emit('refresh-orders')" class="mt-4 bg-upi-green/10 hover:bg-upi-green/20 text-upi-green px-4 py-2 rounded-md font-medium transition-all transform hover:scale-105">
+            Refresh Orders
+          </button>
         </div>
         
         <div v-else class="space-y-4">

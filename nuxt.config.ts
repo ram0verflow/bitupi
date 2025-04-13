@@ -1,10 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
+
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
   ],
+
   tailwindcss: {
     cssPath: '~/assets/css/main.css',
     configPath: 'tailwind.config.js',
@@ -12,6 +14,7 @@ export default defineNuxtConfig({
     injectPosition: 0,
     viewer: true,
   },
+
   app: {
     head: {
       title: 'LN2UPI - Lightning Payments to UPI',
@@ -28,13 +31,14 @@ export default defineNuxtConfig({
       ]
     }
   },
+
   components: true,
-  
+
   // Server side
   nitro: {
     plugins: ['~/server/index.ts']
   },
-  
+
   // API routes
   serverHandlers: [
     {
@@ -50,7 +54,7 @@ export default defineNuxtConfig({
       handler: '~/server/api/lightning-payment.ts'
     }
   ],
-  
+
   // Runtime config (environment variables)
   runtimeConfig: {
     // Server-only variables
@@ -67,5 +71,7 @@ export default defineNuxtConfig({
       enableRealExchangeRates: process.env.ENABLE_REAL_EXCHANGE_RATES === 'true' || false,
       enablePubSub: process.env.ENABLE_PUBSUB === 'true' || true,
     }
-  }
+  },
+
+  compatibilityDate: '2025-04-14'
 })

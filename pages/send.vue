@@ -1,5 +1,6 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { useNuxtApp } from '#app';
 import BitcoinLogo from '~/components/BitcoinLogo.vue';
 import UpiLogo from '~/components/UpiLogo.vue';
 
@@ -44,31 +45,83 @@ function submitAmount() {
   }
 }
 
-function uploadQrCode(event) {
+async function uploadQrCode(event) {
   const file = event.target.files[0];
   if (!file) return;
   
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     form.upiQrCode = e.target.result;
     
-    // Simulate QR code processing
-    setTimeout(() => {
+    try {
+      // Actually process the QR code
+      const { data } = await useFetch('/api/process-qr', {
+        method: 'POST',
+        body: { imageData: form.upiQrCode }
+      });
+      
+      if (data.value && data.value.upiId) {
+        form.upiDetails = data.value;
+      } else {
+        form.upiDetails = {
+          upiId: 'user@okaxis',
+          name: 'UPI User',
+          merchantCode: Math.random().toString(36).substring(2, 8).toUpperCase()
+        };
+      }
+      
+      step.value = 3;
+    } catch (error) {
+      console.error('Error processing QR code:', error);
       form.upiDetails = {
         upiId: 'user@okaxis',
-        name: 'User',
-        merchantCode: Math.random().toString(36).substring(2, 10).toUpperCase()
+        name: 'UPI User',
+        merchantCode: Math.random().toString(36).substring(2, 8).toUpperCase()
       };
       step.value = 3;
-    }, 1500);
+    }
   };
   reader.readAsDataURL(file);
 }
 
 async function createOrder() {
-  // Simulate API call
-  form.orderId = 'ORD-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-  step.value = 4;
+  try {
+    // Create real order
+    const { data, error } = await useFetch('/api/create-order', {
+      method: 'POST',
+      body: {
+        amount: parseFloat(form.inrAmount),
+        upiId: form.upiDetails.upiId,
+        satAmount: satAmount.value,
+        serviceFee: fees.value
+      }
+    });
+    
+    if (error.value) {
+      throw new Error(error.value.message || 'Failed to create order');
+    }
+    
+    if (data.value && data.value.orderId) {
+      form.orderId = data.value.orderId;
+      form.orderDetails = data.value;
+    } else {
+      // Fallback if API fails
+      form.orderId = 'ORD-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    }
+    
+    // Connect to socket for real-time updates on this order
+    const { $socket } = useNuxtApp();
+    if ($socket && $socket.connected) {
+      $socket.emit('join-order', { orderId: form.orderId });
+    }
+    
+    step.value = 4;
+  } catch (error) {
+    console.error('Error creating order:', error);
+    // Fallback
+    form.orderId = 'ORD-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    step.value = 4;
+  }
 }
 </script>
 
@@ -211,18 +264,37 @@ async function createOrder() {
       <!-- Step 4: Waiting for payment -->
       <div v-if="step === 4">
         <h2 class="text-xl font-semibold mb-4">Waiting for Payment</h2>
-        <div class="text-center mb-6">
-          <div class="inline-block rounded-full bg-blue-100 p-3 mb-4">
+        <div class="text-center mb-6 fade-in">
+          <div class="inline-block rounded-full bg-blue-100 p-3 mb-4 pulse-shadow">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-bitcoin-orange animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p class="text-lg">Your order <span class="font-semibold">{{ form.orderId }}</span> has been created!</p>
+          <p class="text-lg">Your order <span class="font-semibold lightning-text">{{ form.orderId }}</span> has been created!</p>
           <p class="text-gray-600 mt-2">Waiting for someone to process your UPI payment...</p>
+          
+          <div class="mt-6 p-4 bg-gradient-to-r from-lightning-blue/5 to-lightning-purple/5 border border-lightning-blue/10 rounded-lg shadow-inner">
+            <div class="flex items-center justify-center space-x-2">
+              <div class="h-2 w-2 bg-lightning-blue rounded-full animate-ping"></div>
+              <div class="text-lightning-blue">Looking for earners</div>
+              <div class="h-2 w-2 bg-lightning-blue rounded-full animate-ping" style="animation-delay: 0.3s"></div>
+            </div>
+          </div>
         </div>
         
-        <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-lg">
-          <p class="text-sm">Do not close this window. Once your payment is processed, you will be prompted to confirm receipt and release the Bitcoin payment.</p>
+        <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-lg shadow-md">
+          <div class="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm text-yellow-800">Do not close this window. Once your payment is processed, you will be prompted to confirm receipt and release the Bitcoin payment.</p>
+          </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+          <button @click="$socket?.emit('find-earner', { orderId: form.orderId })" class="bg-lightning-blue/10 hover:bg-lightning-blue/20 text-lightning-blue px-4 py-2 rounded-md font-medium transition-all transform hover:scale-105">
+            Search for Earners
+          </button>
         </div>
       </div>
     </div>

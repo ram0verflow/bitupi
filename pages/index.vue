@@ -3,6 +3,8 @@ import { ref } from 'vue';
 import UpiLogo from '~/components/UpiLogo.vue';
 import BhimLogo from '~/components/BhimLogo.vue';
 import IndianContextTip from '~/components/IndianContextTip.vue';
+import PlatformStats from '~/components/PlatformStats.vue';
+import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
 
 // Fetch the exchange rate
 const { data: exchangeRate } = await useFetch('/api/exchange-rate');
@@ -28,9 +30,7 @@ const satoshiRate = ref(Math.round((currentRate.value / 100000000) * 1000) / 100
         <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-dark-text mb-6 leading-tight">
           <span class="lightning-text">Lightning</span>
           <span class="mx-2">to</span>
-          <span class="inline-flex items-center">
-            <UpiLogo :width="83" :height="30" class="mx-2" />
-          </span>
+          <span class="upi-text">UPI</span>
           <br>Direct Payments
         </h1>
         
@@ -40,38 +40,42 @@ const satoshiRate = ref(Math.round((currentRate.value / 100000000) * 1000) / 100
         </p>
         
         <div class="flex flex-col sm:flex-row justify-center gap-4 mb-16">
-          <NuxtLink to="/send" class="bg-lightning-blue hover:bg-lightning-blue/90 text-white font-bold py-4 px-8 rounded-lg shadow-lg text-xl transition-colors inline-flex items-center justify-center">
+          <NuxtLink to="/send" class="btn-glow bg-lightning-blue hover:bg-lightning-blue/90 text-white font-bold py-4 px-8 rounded-lg shadow-lg text-xl transition-colors inline-flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
             </svg>
-            Send to UPI
+            <span class="relative z-10">Send to UPI</span>
           </NuxtLink>
-          <NuxtLink to="/receive" class="bg-upi-green hover:bg-upi-green/90 text-white font-bold py-4 px-8 rounded-lg shadow-lg text-xl transition-colors inline-flex items-center justify-center">
+          <NuxtLink to="/receive" class="btn-glow bg-upi-green hover:bg-upi-green/90 text-white font-bold py-4 px-8 rounded-lg shadow-lg text-xl transition-colors inline-flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
-            Receive Sats
+            <span class="relative z-10">Receive Sats</span>
           </NuxtLink>
         </div>
         
         <!-- Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border">
-            <div class="text-3xl font-bold text-lightning-blue">₹{{ satoshiRate }}</div>
-            <div class="text-sm text-gray-600 dark:text-dark-text-secondary">per 1000 sats</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-10">
+          <div class="col-span-2 md:col-span-4">
+            <AnimatedRateCounter :initial-value="currentRate" />
           </div>
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border">
-            <div class="text-3xl font-bold text-upi-green">0%</div>
+          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border hover:shadow-lg transition-all">
+            <div class="text-3xl font-bold text-upi-green floating">0%</div>
             <div class="text-sm text-gray-600 dark:text-dark-text-secondary">KYC Required</div>
           </div>
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border">
-            <div class="text-3xl font-bold text-lightning-purple">1%</div>
+          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border hover:shadow-lg transition-all">
+            <div class="text-3xl font-bold text-lightning-purple floating">1%</div>
             <div class="text-sm text-gray-600 dark:text-dark-text-secondary">Service Fee</div>
           </div>
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border">
-            <div class="text-3xl font-bold text-bitcoin-orange">24/7</div>
+          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border hover:shadow-lg transition-all">
+            <div class="text-3xl font-bold text-bitcoin-orange floating">24/7</div>
             <div class="text-sm text-gray-600 dark:text-dark-text-secondary">Availability</div>
           </div>
+        </div>
+        
+        <!-- Platform Stats -->
+        <div class="max-w-4xl mx-auto fade-in">
+          <PlatformStats />
         </div>
       </div>
     </section>
@@ -165,7 +169,7 @@ const satoshiRate = ref(Math.round((currentRate.value / 100000000) * 1000) / 100
                   </div>
                 </li>
               </ol>
-              <NuxtLink to="/send" class="mt-6 block text-center bg-lightning-blue/10 hover:bg-lightning-blue/20 text-lightning-blue px-4 py-2 rounded-md font-medium transition-colors">
+              <NuxtLink to="/send" class="mt-6 block text-center bg-lightning-blue/10 hover:bg-lightning-blue/20 text-lightning-blue px-4 py-2 rounded-md font-medium transition-colors transform hover:scale-105 hover:shadow-md">
                 Send to UPI Now
               </NuxtLink>
             </div>
@@ -210,7 +214,7 @@ const satoshiRate = ref(Math.round((currentRate.value / 100000000) * 1000) / 100
                   </div>
                 </li>
               </ol>
-              <NuxtLink to="/receive" class="mt-6 block text-center bg-upi-green/10 hover:bg-upi-green/20 text-upi-green px-4 py-2 rounded-md font-medium transition-colors">
+              <NuxtLink to="/receive" class="mt-6 block text-center bg-upi-green/10 hover:bg-upi-green/20 text-upi-green px-4 py-2 rounded-md font-medium transition-colors transform hover:scale-105 hover:shadow-md">
                 Start Receiving Sats
               </NuxtLink>
             </div>
@@ -233,9 +237,9 @@ const satoshiRate = ref(Math.round((currentRate.value / 100000000) * 1000) / 100
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1200px-PhonePe_Logo.svg.png" alt="PhonePe" class="h-8 object-contain" />
           <BhimLogo :width="80" :height="24" class="h-8 object-contain my-1" />
         </div>
-        <NuxtLink to="/send" class="inline-flex items-center bg-lightning-blue hover:bg-lightning-blue/90 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-          <span>Get Started Now</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <NuxtLink to="/send" class="btn-glow inline-flex items-center bg-lightning-blue hover:bg-lightning-blue/90 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+          <span class="relative z-10">Get Started Now</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </NuxtLink>

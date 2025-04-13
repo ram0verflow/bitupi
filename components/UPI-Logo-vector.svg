@@ -1,4 +1,4 @@
-<template>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
@@ -12,8 +12,8 @@
    id="svg347"
    version="1.1"
    viewBox="0 0 130.54 46.118"
-   height="100px"
-   width="100px">
+   height="46.118mm"
+   width="130.53999mm">
   <defs
      id="defs341">
     <clipPath
@@ -301,18 +301,3 @@
     </g>
   </g>
 </svg>
-
-</template>
-
-<script setup>
-defineProps({
-  width: {
-    type: [Number, String],
-    default: 83
-  },
-  height: {
-    type: [Number, String],
-    default: 30
-  }
-})
-</script>
