@@ -2,25 +2,51 @@
 
 This document tracks all significant changes to the LN2UPI project, a tool for sending Lightning Network payments to UPI accounts in India.
 
-## [2.1.0] - 2025-04-14 - Phase 2: Backend Enhancement
+## [2.1.0] - 2025-04-15 - Phase 2: Backend Enhancement (Completed)
 
 ### Added
-- Redis integration for robust caching
-- Real-time PubSub system for order notifications and updates
-- Live exchange rate API integration
-- Structured backend architecture for Lightning Network integration
-- Server middleware for rate limiting and security
-- API endpoints with proper error handling and validation
-- Real-time order status tracking
+- Redis integration for robust caching and data persistence
+- Real-time PubSub system with Socket.io for order notifications
+- WebSocket server with Redis adapter for horizontal scaling
+- Live exchange rate API with multiple provider fallback
+- Rate limiting middleware for API protection
+- Client-side Socket.io plugin for real-time updates
+- Enhanced Lightning Network invoice and payment APIs
+- Order status tracking and notification system
+- Proper error handling and logging throughout the application
+- Environment variable configuration system
+- Server initialization with graceful shutdown
 
 ### Technical Details
-- Redis client implementation for Nuxt server
-- WebSocket server with Redis adapter for horizontal scaling
-- Exchange rate API with fallback mechanisms
-- Placeholder interfaces for Lightning Network payment processors
-- Robust error handling and logging system
-- Optimized caching strategies for exchange rates
-- Structured API response format for consistency
+- Redis client implementation with:
+  - Automatic reconnection handling
+  - Caching utilities with TTL support
+  - PubSub functionality for real-time events
+  - Data persistence for orders and invoices
+- Socket.io server with:
+  - Room-based subscriptions for orders
+  - Exchange rate broadcast channels
+  - Redis adapter for scalability
+  - Client reconnection handling
+- Exchange rate API enhanced with:
+  - CoinGecko integration as primary source
+  - Binance API as fallback source
+  - Intelligent caching to reduce API calls
+  - Real-time updates via WebSockets
+- Server middleware:
+  - Rate limiting based on client IP and path
+  - Redis-backed rate limit counters
+  - Path-specific rate limits
+  - Proper rate limit headers
+- Lightning Network APIs:
+  - Improved invoice creation with proper validation
+  - Enhanced payment processing with order tracking
+  - Notifications for payment status changes
+  - Invoice and order correlation
+- Configuration:
+  - Runtime environment variable support
+  - Feature flags for optional functionality
+  - Development environment template
 
 ## [2.0.0] - 2025-04-14 - Phase 1: Dark Mode & Pleb Focus (Completed)
 
