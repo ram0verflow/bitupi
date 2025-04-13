@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Poppins', system-ui, sans-serif;
+    @apply text-gray-800;
+  }
+  
+  body {
+    @apply bg-gray-50;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-bitcoin-orange text-white rounded-md hover:bg-bitcoin-orange/90 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-upi-green text-white rounded-md hover:bg-upi-green/90 transition-colors;
+  }
+
+  .btn-outline {
+    @apply px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-card border border-gray-200 p-4;
+  }
+  
+  .section {
+    @apply py-12;
+  }
+  
+  .container {
+    @apply px-4 mx-auto max-w-7xl;
+  }
+}
+
+/* Indian cultural elements */
+.india-gradient {
+  @apply bg-gradient-to-r from-india-saffron/20 via-white to-india-green/20;
+}
+
+/* UPI Colors and styles */
+.upi-text {
+  @apply text-upi-green;
+}
+
+.upi-bg {
+  @apply bg-upi-green text-white;
+}
+
+/* Bitcoin Colors and styles */
+.bitcoin-text {
+  @apply text-bitcoin-orange;
+}
+
+.bitcoin-bg {
+  @apply bg-bitcoin-orange text-white;
+}
