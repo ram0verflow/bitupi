@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import BitcoinLogo from '~/components/BitcoinLogo.vue';
 import UpiLogo from '~/components/UpiLogo.vue';
+import BhimLogo from '~/components/BhimLogo.vue';
 import IndianContextTip from '~/components/IndianContextTip.vue';
 
 // Fetch the exchange rate
@@ -219,12 +220,12 @@ const currentRate = ref(exchangeRate.value?.rates?.BTC_INR || 5600000);
         <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
           BitUPI is designed specifically for the Indian market, making it easy to exchange Bitcoin using India's popular UPI payment system.
         </p>
-        <div class="flex flex-wrap justify-center gap-6 mb-10">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/1200px-UPI-Logo-vector.svg.png" alt="UPI" class="h-8 object-contain" />
+        <div class="flex flex-wrap justify-center gap-8 mb-10">
+          <UpiLogo :width="100" :height="30" class="h-8 object-contain my-1" />
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/1200px-Google_Pay_Logo.svg.png" alt="Google Pay" class="h-8 object-contain" />
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/1200px-Paytm_Logo_%28standalone%29.svg.png" alt="Paytm" class="h-8 object-contain" />
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1200px-PhonePe_Logo.svg.png" alt="PhonePe" class="h-8 object-contain" />
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/BHIM_logo.svg/1200px-BHIM_logo.svg.png" alt="BHIM" class="h-8 object-contain" />
+          <BhimLogo :width="80" :height="24" class="h-8 object-contain my-1" />
         </div>
         <NuxtLink to="/buy" class="inline-flex items-center bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
           <span>Get Started Now</span>
