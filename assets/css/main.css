@@ -5,17 +5,17 @@
 @layer base {
   html {
     font-family: 'Poppins', system-ui, sans-serif;
-    @apply text-gray-800;
+    @apply text-gray-800 dark:text-dark-text;
   }
   
   body {
-    @apply bg-gray-50;
+    @apply bg-gray-50 dark:bg-dark-bg transition-colors;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 bg-bitcoin-orange text-white rounded-md hover:bg-bitcoin-orange/90 transition-colors;
+    @apply px-4 py-2 bg-lightning-blue text-white rounded-md hover:bg-lightning-blue/90 transition-colors;
   }
 
   .btn-secondary {
@@ -23,11 +23,11 @@
   }
 
   .btn-outline {
-    @apply px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors;
+    @apply px-4 py-2 border border-gray-300 dark:border-dark-border rounded-md hover:bg-gray-100 dark:hover:bg-dark-surface transition-colors;
   }
 
   .card {
-    @apply bg-white rounded-lg shadow-card border border-gray-200 p-4;
+    @apply bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark border border-gray-200 dark:border-dark-border p-4;
   }
   
   .section {
@@ -39,14 +39,27 @@
   }
 }
 
-/* Indian cultural elements */
-.india-gradient {
-  @apply bg-gradient-to-r from-india-saffron/20 via-white to-india-green/20;
+/* Dark-mode transition */
+.dark-transition {
+  @apply transition-colors duration-300;
+}
+
+/* Lightning Network styles */
+.lightning-text {
+  @apply text-lightning-blue dark:text-lightning-blue;
+}
+
+.lightning-bg {
+  @apply bg-lightning-blue text-white;
+}
+
+.lightning-gradient {
+  @apply bg-gradient-to-r from-lightning-blue to-lightning-purple;
 }
 
 /* UPI Colors and styles */
 .upi-text {
-  @apply text-upi-green;
+  @apply text-upi-green dark:text-upi-green;
 }
 
 .upi-bg {
@@ -55,7 +68,7 @@
 
 /* Bitcoin Colors and styles */
 .bitcoin-text {
-  @apply text-bitcoin-orange;
+  @apply text-bitcoin-orange dark:text-bitcoin-orange;
 }
 
 .bitcoin-bg {

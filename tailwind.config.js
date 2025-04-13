@@ -8,24 +8,31 @@ module.exports = {
     './nuxt.config.{js,ts}',
     './app.vue',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Colors inspired by Indian flag and cultural elements
-        'india-saffron': '#FF9933', // Saffron from Indian flag
-        'india-green': '#138808', // Green from Indian flag
-        'india-blue': '#000080', // Navy blue from the Ashoka Chakra
-        'upi-green': '#097140', // UPI brand color
-        'upi-purple': '#734999', // Secondary UPI brand color
+        // Lightning colors
+        'lightning-blue': '#0050FF',
+        'lightning-purple': '#5638E4',
+        // UPI colors
+        'upi-green': '#097140', 
+        'upi-purple': '#734999',
+        // Core UI colors
+        'dark-bg': '#121212',
+        'dark-surface': '#1E1E1E',
+        'dark-border': '#333333',
+        'dark-text': '#E1E1E1',
+        'dark-text-secondary': '#A1A1A1',
         // Bitcoin colors
         'bitcoin-orange': '#F7931A',
-        'bitcoin-blue': '#0D3578',
       },
       fontFamily: {
-        'hindi': ['Poppins', 'system-ui', 'sans-serif'], // Font that supports Hindi characters well
+        'sans': ['Poppins', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        'card-dark': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
         'button': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
       },
     },

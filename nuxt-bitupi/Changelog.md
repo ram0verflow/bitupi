@@ -1,96 +1,78 @@
-# BitUPI Changelog
+# LN2UPI Changelog
 
-This document tracks all significant changes to the BitUPI project, a P2P Bitcoin to UPI exchange platform for the Indian market.
+This document tracks all significant changes to the LN2UPI project, a tool for sending Lightning Network payments to UPI accounts in India.
+
+## [2.0.0] - 2025-04-14 - Dark Mode & Pleb Focus
+
+### Added
+- Complete dark mode implementation with system preference detection
+- Revamped project concept: "Lightning to UPI" direct payment tool
+- New Lightning Network inspired color scheme and branding
+- "For plebs, by plebs" identity throughout the application
+- Dark mode optimized components and UI elements
+- Lightning-themed gradients and design elements
+- Educational content from satoshinotebook.com
+- Improved SVG components:
+  - UpiLogo.vue with more accurate design
+  - BhimLogo.vue component with proper branding
+  - Lightning-themed icons and visuals
+
+### Changed
+- Renamed from BitUPI to LN2UPI to reflect true purpose
+- Changed core concept from "P2P exchange" to "direct payments"
+- Removed internationalization to focus on simplicity
+- Simplified UI with more direct, clearer language
+- Renamed page routes and core functionality:
+  - "/buy" to "/send" for sending to UPI
+  - "/earn" to "/receive" for receiving sats
+- Updated color scheme to focus on Lightning Network blues and purples
+- Removed India-specific cultural elements in favor of Bitcoin pleb focus
+- Enhanced documentation to reflect the project's new direction
+
+### Technical Details
+- TailwindCSS dark mode implementation with class strategy
+- Custom dark theme color palette:
+  - dark-bg: #121212
+  - dark-surface: #1E1E1E 
+  - dark-border: #333333
+  - dark-text: #E1E1E1
+  - dark-text-secondary: #A1A1A1
+- Added Lightning Network colors:
+  - lightning-blue: #0050FF
+  - lightning-purple: #5638E4
+- Local storage for user dark mode preference
+- System preference detection for automatic theme selection
+- Transition animations between light and dark modes
 
 ## [1.0.0] - 2025-04-14 - Nuxt.js Implementation
 
 ### Added
 - Complete Nuxt.js implementation with server API endpoints
-- Proper project structure following Nuxt.js conventions
-- Server API endpoints for:
-  - Exchange rate calculations
-  - Lightning Network invoice creation
-  - Lightning Network payment processing
-- Enhanced UI components with Indian cultural context:
-  - Color scheme inspired by Indian flag (saffron, green, navy blue)
-  - UPI payment app logos for popular Indian services
-  - Hindi language toggle functionality
-  - Support for Hindi characters via appropriate font selection
-  - India-specific educational tips and facts
-- Custom SVG components:
-  - BitcoinLogo.vue for Bitcoin branding
-  - UpiLogo.vue for UPI integration
-  - IndianContextTip.vue for educational content
-- Comprehensive page implementations:
-  - Home page with feature overview and Indian context
-  - Buy Bitcoin flow with step-by-step form process
-  - Earn Bitcoin flow with marketplace and timer functionality
-- Proper TailwindCSS configuration with:
-  - Custom color palette inspired by Indian cultural elements
-  - Responsive design components
-  - Mobile-first approach
-- Documentation:
-  - Detailed README.md with project overview
-  - This Changelog.md file
+- Server API endpoints for exchange rates and Lightning Network operations
+- Enhanced UI components with Indian cultural context
+- Custom SVG components for Bitcoin and UPI logos
+- India-specific educational tips
+- Full page implementations for buying and earning Bitcoin
+- Mobile-responsive design with TailwindCSS
+- Comprehensive documentation
 
 ### Changed
 - Migrated from Vue 3 + Vite to Nuxt.js architecture
-- Restructured the entire application to follow Nuxt.js conventions
+- Restructured application to follow Nuxt.js conventions
 - Implemented server-side rendering capabilities
 - Enhanced API endpoints with simulation features
 - Improved error handling and form validation
-- Optimized mobile responsiveness for Indian market (high mobile usage)
 
-### Technical Details
-- Server API endpoints now provide:
-  - Real-time Bitcoin/INR exchange rates with simulated fluctuations
-  - Lightning Network invoice generation with proper BOLT11 format
-  - Payment processing with appropriate status handling
-- State management via Nuxt's built-in capabilities and composables
-- Client-side form validation for better user experience
-- QR code upload and processing simulation
-- Countdown timer implementation for order processing
-- Color system based on Indian flag colors:
-  - india-saffron: #FF9933
-  - india-green: #138808
-  - india-blue: #000080 (from Ashoka Chakra)
-  - Plus UPI brand colors for brand recognition
-
-## [0.5.0] - 2025-04-13 - Initial Vue.js Implementation
+## [0.5.0] - 2025-04-13 - Initial Implementation
 
 ### Added
-- Basic Vue 3 + Vite project setup
-- Initial component structure:
-  - Basic page layouts
-  - Form components for Buy and Earn flows
-  - Placeholder components for QR code uploads
-- Rudimentary styling with initial TailwindCSS setup
+- Basic project setup with Vue 3 and Vite
+- Initial component structure and page layouts
+- Rudimentary styling with TailwindCSS
 - Mock data for demonstration purposes
 
 ### Technical
 - Vue 3 with Composition API structure
 - Vue Router implementation for navigation
-- Basic Pinia store setup for state management
-- Initial TailwindCSS configuration (incomplete)
-
-### Issues
-- CSS styling not properly applied due to configuration issues
-- No server-side functionality
-- Limited responsiveness
-- No cultural context for Indian market
-- Incomplete user flows
-
-## [0.1.0] - 2025-04-12 - Project Planning
-
-### Added
-- Initial project specifications
-- Core feature requirements:
-  - Anonymous P2P exchange between Bitcoin and UPI
-  - No user accounts, KYC or data persistence
-  - Real-time communication requirements
-- Technical requirements:
-  - Frontend framework selection (Vue.js)
-  - API integration plans (Lightning Network, Exchange rates)
-  - UI/UX considerations for Indian market
-- Project structure planning
-- Implementation timeline and phases
+- Basic state management setup
+- Initial UI component design
