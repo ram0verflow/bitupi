@@ -19,24 +19,45 @@ All of this happens without requiring user accounts, KYC verification, or persis
 - **Built for Plebs**: Simple, no-nonsense interface that just works
 - **Lightning Fast**: Instant payments using Lightning Network and UPI
 - **Mobile Optimized**: Works great on any device
+- **Real-time Updates**: Live order status with WebSockets and Redis PubSub
+- **Robust Caching**: Fast response times with Redis backend
+- **Live Exchange Rates**: Accurate pricing with real market data
 
 ## Technology Stack
 
-- **Framework**: Nuxt.js 3 with Composition API
-- **Styling**: TailwindCSS with dark mode support
-- **State Management**: Nuxt composables
-- **Server API**: Lightning Network and exchange rate endpoints
+- **Frontend**: 
+  - Nuxt.js 3 with Composition API
+  - TailwindCSS with dark mode support
+  - WebSocket client for real-time updates
 
-## Current Status
+- **Backend**:
+  - Nuxt server routes and middleware
+  - Redis for caching and PubSub
+  - WebSocket server for real-time communication
+  - Real exchange rate API integration
+  - Lightning Network payment processor interfaces
 
-The project has been fully implemented with:
+## Development Roadmap
 
-- Dark/light mode toggle with system preference detection
+### Phase 1: Core UI & Concept ✅
+- Dark/light mode with system preference detection
 - Mobile-responsive, clean interface
-- Server API endpoints for Lightning Network and exchange rates
-- Complete Send and Receive payment flows
-- Bitcoin and UPI educational content from satoshinotebook.com
+- Complete user flows for sending and receiving
+- "For plebs, by plebs" identity throughout
 - Simple, grounded UI for a pleb-focused tool
+
+### Phase 2: Backend Enhancement 🚧
+- Redis integration for caching and PubSub
+- Real-time order tracking with WebSockets
+- Live exchange rate API integration
+- Robust error handling and logging
+- Placeholder architecture for Lightning Network integration
+
+### Phase 3: Lightning Integration (Planned)
+- Connect to real Lightning Network payment processors
+- Implement LNURL and other Lightning standards
+- Complete security and penetration testing
+- Performance optimization for high throughput
 
 ## Getting Started
 

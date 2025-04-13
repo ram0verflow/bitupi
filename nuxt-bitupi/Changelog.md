@@ -2,7 +2,27 @@
 
 This document tracks all significant changes to the LN2UPI project, a tool for sending Lightning Network payments to UPI accounts in India.
 
-## [2.0.0] - 2025-04-14 - Dark Mode & Pleb Focus
+## [2.1.0] - 2025-04-14 - Phase 2: Backend Enhancement
+
+### Added
+- Redis integration for robust caching
+- Real-time PubSub system for order notifications and updates
+- Live exchange rate API integration
+- Structured backend architecture for Lightning Network integration
+- Server middleware for rate limiting and security
+- API endpoints with proper error handling and validation
+- Real-time order status tracking
+
+### Technical Details
+- Redis client implementation for Nuxt server
+- WebSocket server with Redis adapter for horizontal scaling
+- Exchange rate API with fallback mechanisms
+- Placeholder interfaces for Lightning Network payment processors
+- Robust error handling and logging system
+- Optimized caching strategies for exchange rates
+- Structured API response format for consistency
+
+## [2.0.0] - 2025-04-14 - Phase 1: Dark Mode & Pleb Focus (Completed)
 
 ### Added
 - Complete dark mode implementation with system preference detection
