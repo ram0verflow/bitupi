@@ -14,11 +14,11 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'BitUPI - Bitcoin to UPI Exchange',
+      title: 'LN2UPI - Lightning Payments to UPI',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { hid: 'description', name: 'description', content: 'Anonymous P2P platform for exchanging Bitcoin via Lightning Network with UPI transfers in India.' }
+        { hid: 'description', name: 'description', content: 'Send Lightning Network payments directly to UPI accounts in India. No KYC, no accounts, just payments.' }
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
@@ -29,6 +29,13 @@ export default defineNuxtConfig({
     }
   },
   components: true,
+  
+  // Server side
+  nitro: {
+    plugins: ['~/server/index.ts']
+  },
+  
+  // API routes
   serverHandlers: [
     {
       route: '/api/exchange-rate',
@@ -42,5 +49,23 @@ export default defineNuxtConfig({
       route: '/api/lightning-payment',
       handler: '~/server/api/lightning-payment.ts'
     }
-  ]
+  ],
+  
+  // Runtime config (environment variables)
+  runtimeConfig: {
+    // Server-only variables
+    redisHost: process.env.REDIS_HOST || 'localhost',
+    redisPort: process.env.REDIS_PORT || 6379,
+    redisPassword: process.env.REDIS_PASSWORD || '',
+    
+    // Variables also exposed to the client
+    public: {
+      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
+      wsUrl: process.env.WS_URL || 'http://localhost:3000',
+      
+      // Feature flags
+      enableRealExchangeRates: process.env.ENABLE_REAL_EXCHANGE_RATES === 'true' || false,
+      enablePubSub: process.env.ENABLE_PUBSUB === 'true' || true,
+    }
+  }
 })

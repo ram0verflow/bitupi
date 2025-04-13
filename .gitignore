@@ -35,3 +35,11 @@ lerna-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# Redis data
+redis-data/
+dump.rdb
+
+# Temporary files
+*.tmp
+*.temp
