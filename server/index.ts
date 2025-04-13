@@ -2,14 +2,14 @@ import { createServer } from 'http';
 import { initSocketServer, shutdownSocketServer } from './websockets/socket-server';
 import { getRedisClient, getSubscriberClient } from './utils/redis';
 import consola from 'consola';
-import ioredis from 'ioredis';
+import Redis from 'ioredis';
 
 // Server-wide logger
 const logger = consola.withScope('server');
 
 // Initialize Redis client with retry strategy
-let redisClient: ioredis.Redis | null = null;
-let subscriberClient: ioredis.Redis | null = null;
+let redisClient: Redis | null = null;
+let subscriberClient: Redis | null = null;
 let httpServer: any = null;
 let isShuttingDown = false;
 

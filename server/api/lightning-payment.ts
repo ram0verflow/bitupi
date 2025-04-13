@@ -2,6 +2,7 @@ import { defineEventHandler, readBody } from 'h3';
 import { getRedisClient, publishMessage } from '../utils/redis';
 import { CHANNELS, notifyOrderUpdate } from '../websockets/socket-server';
 import crypto from 'crypto';
+import type { LightningInvoice, LightningPayment, Order } from '../lightning-payment';
 
 // Constants
 const INVOICE_PREFIX = 'invoice:';
@@ -46,7 +47,7 @@ function generatePaymentPreimage(): string {
 }
 
 // Retrieve invoice from Redis
-async function getInvoice(invoiceId: string) {
+async function getInvoice(invoiceId: string): Promise<LightningInvoice | null> {
   const redis = getRedisClient();
   const key = INVOICE_PREFIX + invoiceId;
   
@@ -55,11 +56,11 @@ async function getInvoice(invoiceId: string) {
     return null;
   }
   
-  return JSON.parse(data);
+  return JSON.parse(data) as LightningInvoice;
 }
 
 // Retrieve order from Redis
-async function getOrder(orderId: string) {
+async function getOrder(orderId: string): Promise<Order | null> {
   const redis = getRedisClient();
   const key = ORDER_PREFIX + orderId;
   
@@ -68,7 +69,7 @@ async function getOrder(orderId: string) {
     return null;
   }
   
-  return JSON.parse(data);
+  return JSON.parse(data) as Order;
 }
 
 // Update invoice status in Redis

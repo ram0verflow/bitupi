@@ -40,7 +40,8 @@ export default defineEventHandler(async (event) => {
         if (err) return;
         
         try {
-          const order = JSON.parse(data);
+          // Cast data to string to ensure safe parsing
+          const order = JSON.parse(data as string);
           if (order.status === 'PENDING') {
             pendingOrdersCount++;
           } else if (order.status === 'COMPLETED') {
@@ -87,7 +88,7 @@ export default defineEventHandler(async (event) => {
         uptime: process.uptime().toFixed(2) + 's',
         memoryUsage: usedMemory,
         currentRate: rateData?.rates?.BTC_INR || null,
-        currentTransport: io ? io.engine.transport.name : 'none',
+        currentTransport: io ? (io.engine as any).transport?.name : 'none',
       }
     };
   } catch (error) {

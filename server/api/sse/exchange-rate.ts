@@ -1,6 +1,6 @@
 import { defineEventHandler, setHeader, sendStream } from 'h3';
 import { Readable } from 'stream';
-import { getRedisClient, getSubscriberClient } from '~/server/utils/redis';
+import { getRedisClient, getSubscriberClient } from '../../utils/redis';
 
 /**
  * Server-Sent Events endpoint for exchange rate updates.

@@ -1,6 +1,7 @@
 import { defineEventHandler, setHeader, sendStream, getRouterParam } from 'h3';
 import { Readable } from 'stream';
-import { getRedisClient, getSubscriberClient } from '~/server/utils/redis';
+import { getRedisClient, getSubscriberClient } from '../../../utils/redis';
+import { CHANNELS } from '../../../websockets/socket-server';
 
 /**
  * Server-Sent Events endpoint for specific order updates.
