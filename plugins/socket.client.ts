@@ -73,6 +73,15 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (connectionAttempts >= MAX_WEBSOCKET_ATTEMPTS && !isUsingSSE) {
         console.log('WebSocket connection failed, trying SSE fallback');
         setupSSEFallback();
+      } else {
+        // Retry with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, connectionAttempts), 10000);
+        console.log(`Will retry connection in ${delay}ms`);
+        setTimeout(() => {
+          if (socket && !socket.connected) {
+            socket.connect();
+          }
+        }, delay);
       }
     });
     

@@ -56,6 +56,7 @@ async function storeOrder(order) {
   
   // Publish order created event
   publishMessage(CHANNELS.ORDER_CREATED, order);
+  console.log(`Published order created event for ${order.id}`);
 }
 
 // The main event handler

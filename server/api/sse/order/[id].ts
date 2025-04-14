@@ -54,6 +54,7 @@ export default defineEventHandler(async (event) => {
   try {
     const orderData = await redis.get(`order:${orderId}`);
     if (orderData) {
+      console.log(`SSE sending initial order data for ${orderId}`);
       stream.push(`data: ${orderData}\n\n`);
     }
   } catch (e) {
@@ -62,11 +63,25 @@ export default defineEventHandler(async (event) => {
   
   // Subscribe to order channel
   await subscriber.subscribe(`order:${orderId}:update`);
+  // Also subscribe to the general orders update channel
+  await subscriber.subscribe('order:update');
   
   // Handle incoming messages from Redis PubSub
   subscriber.on('message', (channel, message) => {
     if (channel === `order:${orderId}:update`) {
+      console.log(`SSE received update for order ${orderId}`);
       stream.push(`data: ${message}\n\n`);
+    } else if (channel === 'order:update') {
+      try {
+        const data = JSON.parse(message);
+        // Check if this update is for our order
+        if (data.orderId === orderId) {
+          console.log(`SSE received general update for order ${orderId}`);
+          stream.push(`data: ${message}\n\n`);
+        }
+      } catch (e) {
+        console.error('Error parsing order update data:', e);
+      }
     }
   });
   
@@ -79,6 +94,8 @@ export default defineEventHandler(async (event) => {
   event.node.req.on('close', () => {
     clearInterval(heartbeatInterval);
     subscriber.unsubscribe(`order:${orderId}:update`);
+    subscriber.unsubscribe('order:update');
+    console.log(`SSE connection closed for order ${orderId}`);
     stream.push(null); // End the stream
   });
   

@@ -18,8 +18,8 @@ export function getRedisClient() {
       port: redisPort,
       password: redisPassword,
       retryStrategy: (times) => {
-        // Exponential backoff with max 30s retry delay
-        const delay = Math.min(times * 1000, 30000);
+            // Exponential backoff with max 30s retry delay
+        const delay = Math.min(Math.pow(2, times) * 1000, 30000);
         console.log(`Redis connection attempt failed. Retrying in ${delay}ms...`);
         return delay;
       }

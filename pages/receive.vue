@@ -1,277 +1,488 @@
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
-import { useNuxtApp } from '#app';
-import UpiLogo from '~/components/UpiLogo.vue';
-import BitcoinLogo from '~/components/BitcoinLogo.vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import OrderCard from '~/components/OrderCard.vue';
+import ReceiptUploader from '~/components/ReceiptUploader.vue';
 
-// Page state
-const step = ref(1);
+// State variables
+const step = ref(1); // 1: Marketplace, 2: Payment, 3: Complete
+const orders = ref([]);
 const selectedOrder = ref(null);
-const timeLeft = ref(0);
-const receiptUploaded = ref(false);
+const receipt = ref(null);
+const lightningAddress = ref('');
+const isSubmitting = ref(false);
 const errorMessage = ref('');
+const eventSource = ref(null);
+const isLoading = ref(true);
+const orderStatus = ref('pending');
 
-// Real-time orders from socket connection
-const availableOrders = reactive([]);
-const loading = ref(true);
-const { $socket } = useNuxtApp();
-
-// Connect to socket for real-time updates
-onMounted(() => {
-  // Subscribe to order updates
-  useNuxtApp().hook('socket:orders-update', (data) => {
-    if (data && Array.isArray(data)) {
-      // Replace or update available orders
-      availableOrders.splice(0, availableOrders.length, ...data);
-      loading.value = false;
-    }
-  });
-  
-  // Signal that we're an earner
-  if ($socket && $socket.connected) {
-    $socket.emit('register-earner');
-  }
-  
-  // Fallback if socket doesn't receive data in 3 seconds
-  setTimeout(() => {
-    if (loading.value) {
-      loading.value = false;
-    }
-  }, 3000);
+// Filtered active orders
+const activeOrders = computed(() => {
+  return orders.value.filter(order => order.status === 'pending');
 });
 
-onUnmounted(() => {
-  // Unregister as earner when leaving page
-  if ($socket && $socket.connected) {
-    $socket.emit('unregister-earner');
-  }
-});
-
-// Order timer countdown
-let timerInterval = null;
-
-function selectOrder(order) {
-  selectedOrder.value = order;
-  timeLeft.value = 15 * 60; // 15 minutes in seconds
-  step.value = 2;
-  
-  // Start countdown timer
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timeLeft.value--;
-    if (timeLeft.value <= 0) {
-      clearInterval(timerInterval);
-      // Return to order list
-      errorMessage.value = 'Time expired! The order has been returned to the marketplace.';
-      step.value = 1;
+// Get all available orders
+async function fetchOrders() {
+  try {
+    isLoading.value = true;
+    const response = await fetch('/api/orders', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch orders');
     }
-  }, 1000);
-}
-
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function formatTimeAgo(timestamp) {
-  const now = new Date();
-  const createdTime = new Date(timestamp);
-  const diffSeconds = Math.floor((now - createdTime) / 1000);
-  
-  if (diffSeconds < 60) {
-    return `${diffSeconds} seconds ago`;
-  } else if (diffSeconds < 3600) {
-    const minutes = Math.floor(diffSeconds / 60);
-    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-  } else {
-    const hours = Math.floor(diffSeconds / 3600);
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      orders.value = data;
+    }
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    errorMessage.value = 'Failed to load available orders. Please try again.';
+  } finally {
+    isLoading.value = false;
   }
 }
 
-function uploadReceipt(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  if (!file.type.match('image.*')) {
-    errorMessage.value = 'Please upload an image file';
+// Set up SSE for real-time order updates
+function setupOrderUpdates() {
+  if (process.client) {
+    try {
+      const es = new EventSource('/api/sse/orders');
+      
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.action === 'add') {
+            // Add new order to the list
+            orders.value.unshift(data.order);
+          } else if (data.action === 'update') {
+            // Update existing order
+            const index = orders.value.findIndex(o => o.id === data.order.id);
+            if (index !== -1) {
+              orders.value[index] = data.order;
+              
+              // If this is our selected order, update status
+              if (selectedOrder.value && selectedOrder.value.id === data.order.id) {
+                selectedOrder.value = data.order;
+                orderStatus.value = data.order.status;
+                
+                if (data.order.status === 'completed') {
+                  step.value = 3; // Move to complete step
+                }
+              }
+            }
+          } else if (data.action === 'remove') {
+            // Remove order from list
+            const index = orders.value.findIndex(o => o.id === data.orderId);
+            if (index !== -1) {
+              orders.value.splice(index, 1);
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing SSE message:', e);
+        }
+      };
+      
+      es.onerror = (error) => {
+        console.error('SSE connection error:', error);
+      };
+      
+      eventSource.value = es;
+    } catch (error) {
+      console.error('Failed to initialize SSE:', error);
+    }
+  }
+}
+
+// Claim an order
+async function claimOrder(order) {
+  try {
+    isSubmitting.value = true;
+    errorMessage.value = '';
+    
+    const response = await fetch(`/api/orders/${order.id}/claim`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to claim order');
+    }
+    
+    const data = await response.json();
+    if (data.success) {
+      selectedOrder.value = order;
+      orderStatus.value = 'processing';
+      step.value = 2; // Move to payment step
+      
+      // Setup specific order updates
+      setupSpecificOrderUpdates(order.id);
+    } else {
+      throw new Error('Order claim failed');
+    }
+  } catch (error) {
+    errorMessage.value = error.message || 'Failed to claim order';
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+// Set up SSE for specific order status updates
+function setupSpecificOrderUpdates(id) {
+  if (process.client && id) {
+    try {
+      // Close existing SSE connection
+      if (eventSource.value && eventSource.value !== null) {
+        eventSource.value.close();
+      }
+      
+      const es = new EventSource(`/api/sse/order/${id}`);
+      
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.status) {
+            orderStatus.value = data.status;
+            
+            if (data.status === 'completed') {
+              step.value = 3; // Move to complete step
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing order update:', e);
+        }
+      };
+      
+      es.onerror = (error) => {
+        console.error('Order update SSE error:', error);
+      };
+      
+      eventSource.value = es;
+    } catch (error) {
+      console.error('Failed to initialize order updates:', error);
+    }
+  }
+}
+
+// Receipt upload handling
+function handleReceiptUpload(result) {
+  receipt.value = result;
+}
+
+// Submit receipt for verification
+async function submitReceipt() {
+  if (!receipt.value || !selectedOrder.value) {
+    errorMessage.value = 'Please upload a receipt first';
     return;
   }
   
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    // Simulate receipt verification (would connect to backend in real app)
-    setTimeout(() => {
-      receiptUploaded.value = true;
-      step.value = 3;
-      
-      // Clear the timer
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
-    }, 1500);
-  };
-  reader.readAsDataURL(file);
+  isSubmitting.value = true;
+  errorMessage.value = '';
+  
+  try {
+    const response = await fetch(`/api/orders/${selectedOrder.value.id}/receipt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        receiptImage: receipt.value.image,
+        lightningAddress: lightningAddress.value
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to submit receipt');
+    }
+    
+    const data = await response.json();
+    if (data.success) {
+      // Receipt submitted, now waiting for buyer to confirm
+      orderStatus.value = 'verifying';
+    } else {
+      throw new Error('Receipt submission failed');
+    }
+  } catch (error) {
+    errorMessage.value = error.message || 'Failed to submit receipt';
+  } finally {
+    isSubmitting.value = false;
+  }
 }
+
+// Handle order card action buttons
+function handleOrderAction(order) {
+  // If order is pending, claim it
+  if (order.status === 'pending') {
+    claimOrder(order);
+  } 
+  // If it's processing and you're already on the order, do nothing (we're already showing the receipt upload)
+  // If it's completed, also do nothing
+}
+
+// Reset process and go back to marketplace
+function resetProcess() {
+  step.value = 1;
+  selectedOrder.value = null;
+  receipt.value = null;
+  lightningAddress.value = '';
+  errorMessage.value = '';
+  
+  // Close specific order SSE if any
+  if (eventSource.value && eventSource.value !== null) {
+    eventSource.value.close();
+  }
+  
+  // Set up marketplace updates again
+  setupOrderUpdates();
+  fetchOrders();
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  fetchOrders();
+  setupOrderUpdates();
+});
+
+onUnmounted(() => {
+  // Cleanup SSE connection
+  if (eventSource.value && eventSource.value !== null) {
+    eventSource.value.close();
+  }
+});
 </script>
 
 <template>
-  <div class="container py-8 md:py-12">
-    <h1 class="text-3xl font-bold text-center mb-8">Earn Bitcoin</h1>
-    
-    <div v-if="errorMessage" class="max-w-4xl mx-auto mb-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-      {{ errorMessage }}
-      <button @click="errorMessage = ''" class="ml-2 text-red-500 font-medium hover:text-red-700">Dismiss</button>
+  <div class="container py-12 px-6">
+    <!-- Error message -->
+    <div v-if="errorMessage" class="mb-8 p-4 bg-error/10 border border-error rounded-lg max-w-4xl mx-auto">
+      <p class="text-error">{{ errorMessage }}</p>
     </div>
     
-    <!-- Step 1: Order List -->
-    <div v-if="step === 1" class="max-w-4xl mx-auto">
-      <div class="bg-white rounded-lg shadow-card p-6">
-        <h2 class="text-xl font-semibold mb-4">Available Payment Requests</h2>
-        <p class="text-gray-600 mb-6">
-          Process UPI payments and earn Bitcoin. First-click-first-serve basis.
+    <!-- Step 1: Order Marketplace -->
+    <div v-if="step === 1">
+      <div class="text-center mb-12">
+        <h1 class="font-display text-3xl font-medium text-text-light mb-4">Earn Sats by Sending UPI Payments</h1>
+        <p class="text-text-muted max-w-2xl mx-auto">
+          Browse available orders, make UPI payments, and earn bitcoin in return. 
+          Orders are claimed on a first-come, first-served basis.
         </p>
+      </div>
+      
+      <div class="bg-secondary/10 border border-secondary/30 rounded-lg p-4 mb-8 max-w-4xl mx-auto">
+        <h3 class="font-display font-medium text-secondary mb-2">How It Works</h3>
+        <ol class="list-decimal pl-5 space-y-2 text-text-muted">
+          <li>Select an order from the available listings</li>
+          <li>Send the UPI payment to the provided account within the time limit</li>
+          <li>Upload a screenshot/receipt of your payment</li>
+          <li>Once the buyer confirms receipt, you'll receive the bitcoin payment</li>
+        </ol>
+      </div>
+      
+      <div class="max-w-4xl mx-auto">
+        <h2 class="font-display text-2xl font-medium text-text-light mb-6">Available Orders</h2>
         
-        <div v-if="loading" class="py-8">
-          <div class="flex flex-col items-center justify-center space-y-4">
-            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-upi-green"></div>
-            <p class="text-gray-600">Loading available orders...</p>
-          </div>
+        <div v-if="isLoading" class="flex justify-center my-12">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
         
-        <div v-else-if="availableOrders.length === 0" class="text-center py-8 text-gray-500">
-          <div class="lightning-gradient text-white inline-flex items-center p-3 rounded-full mb-4 shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <p>No payment requests available at the moment.</p>
-          <p class="text-sm mt-2">Check back soon for new opportunities to earn Bitcoin!</p>
-          <button @click="$socket.emit('refresh-orders')" class="mt-4 bg-upi-green/10 hover:bg-upi-green/20 text-upi-green px-4 py-2 rounded-md font-medium transition-all transform hover:scale-105">
-            Refresh Orders
+        <div v-else-if="activeOrders.length === 0" class="card text-center py-12">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-text-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h3 class="font-display text-xl font-medium text-text-light mb-2">No Orders Available</h3>
+          <p class="text-text-muted">
+            There are currently no active orders to process. 
+            Please check back later or refresh the page.
+          </p>
+          <button 
+            @click="fetchOrders"
+            class="btn-outline-primary mt-6"
+          >
+            Refresh
           </button>
         </div>
         
-        <div v-else class="space-y-4">
-          <div v-for="order in availableOrders" :key="order.id" class="border border-gray-200 rounded-lg hover:border-upi-green hover:shadow-md transition-all">
-            <div class="p-4">
-              <div class="flex justify-between items-start">
-                <div>
-                  <div class="flex items-center">
-                    <span class="font-semibold">{{ order.id }}</span>
-                    <span class="ml-2 text-xs text-gray-500">{{ formatTimeAgo(order.timeCreated) }}</span>
-                  </div>
-                  <div class="text-lg font-medium mt-1">₹{{ order.amount }}</div>
-                </div>
-                
-                <div class="text-right">
-                  <div class="text-gray-600 text-sm">You'll receive</div>
-                  <div class="text-lg font-medium">{{ order.satAmount + order.profit }} sats</div>
-                  <div class="text-xs text-green-600">+{{ order.profit }} sats profit</div>
-                </div>
-              </div>
-              
-              <div class="mt-4 flex justify-between items-center">
-                <div class="text-sm text-gray-600">
-                  <span>UPI: {{ order.upiId }}</span>
-                </div>
-                
-                <button 
-                  @click="selectOrder(order)"
-                  class="bg-upi-green hover:bg-upi-green/90 text-white px-4 py-2 rounded-md text-sm transition-colors"
-                >
-                  Process Payment
-                </button>
-              </div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <OrderCard 
+            v-for="order in activeOrders"
+            :key="order.id"
+            :order="order"
+            type="earn"
+            status="pending"
+            :selectable="true"
+            @action="handleOrderAction(order)"
+          />
+        </div>
+      </div>
+    </div>
+    
+    <!-- Step 2: Payment Process -->
+    <div v-else-if="step === 2" class="max-w-4xl mx-auto">
+      <h2 class="font-display text-2xl font-medium text-text-light mb-6">Process UPI Payment</h2>
+      
+      <div v-if="selectedOrder" class="mb-8">
+        <OrderCard 
+          :order="selectedOrder"
+          type="earn"
+          :status="orderStatus"
+        />
+      </div>
+      
+      <div class="card mb-8">
+        <h3 class="font-display text-xl font-medium text-text-light mb-4">UPI Payment Instructions</h3>
+        
+        <div class="bg-bg-input p-4 rounded-lg mb-4">
+          <p class="font-medium text-text-light mb-2">Send payment to:</p>
+          <div class="flex items-center justify-between bg-bg-dark p-3 rounded-lg">
+            <span class="font-mono text-secondary">{{ selectedOrder?.upiId }}</span>
+            
+            <button 
+              @click="navigator.clipboard.writeText(selectedOrder?.upiId)"
+              class="px-2 py-1 text-xs rounded bg-bg-card text-text-muted hover:text-secondary transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+        
+        <div class="space-y-4 text-text-muted">
+          <div class="flex items-start">
+            <div class="mr-3 text-secondary">1.</div>
+            <p>Open your UPI app (Google Pay, PhonePe, Paytm, etc.)</p>
+          </div>
+          
+          <div class="flex items-start">
+            <div class="mr-3 text-secondary">2.</div>
+            <p>Send exactly ₹{{ selectedOrder?.inrAmount }} to the UPI ID above</p>
+          </div>
+          
+          <div class="flex items-start">
+            <div class="mr-3 text-secondary">3.</div>
+            <p>Take a screenshot of the payment confirmation</p>
+          </div>
+          
+          <div class="flex items-start">
+            <div class="mr-3 text-secondary">4.</div>
+            <p>Upload the screenshot below</p>
+          </div>
+        </div>
+      </div>
+      
+      <div v-if="orderStatus === 'processing'" class="card mb-8">
+        <h3 class="font-display text-xl font-medium text-text-light mb-4">Upload Payment Receipt</h3>
+        
+        <ReceiptUploader 
+          @upload-success="handleReceiptUpload"
+          @upload-error="errorMessage = $event.message"
+        />
+        
+        <div class="mt-6" v-if="receipt">
+          <label class="block mb-2 text-text-light font-medium">
+            Your Lightning Address (to receive sats)
+          </label>
+          <input 
+            v-model="lightningAddress"
+            type="text"
+            class="input"
+            placeholder="your@lightning.address"
+          />
+          <p class="text-text-muted text-sm mt-2">If you don't have a Lightning address, you can use a LNURL or Invoice in this field.</p>
+        </div>
+        
+        <div class="flex justify-between mt-6">
+          <button 
+            @click="resetProcess"
+            class="btn-outline-primary"
+          >
+            Back to Marketplace
+          </button>
+          
+          <button 
+            v-if="receipt"
+            @click="submitReceipt"
+            :disabled="isSubmitting || !lightningAddress"
+            class="btn-secondary"
+            :class="{'opacity-50 cursor-not-allowed': isSubmitting || !lightningAddress}"
+          >
+            <span v-if="isSubmitting">Submitting...</span>
+            <span v-else>Submit Receipt</span>
+          </button>
+        </div>
+      </div>
+      
+      <div v-else-if="orderStatus === 'verifying'" class="card mb-8 text-center">
+        <div class="text-warning mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        
+        <h3 class="font-display text-xl font-medium text-text-light mb-2">Receipt Submitted</h3>
+        
+        <p class="text-text-muted mb-6">
+          Your receipt has been submitted and is awaiting confirmation from the buyer.
+          This usually takes just a few minutes.
+        </p>
+        
+        <div class="flex justify-center">
+          <button 
+            @click="resetProcess"
+            class="btn-outline-secondary"
+          >
+            Back to Marketplace
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Step 3: Transaction Complete -->
+    <div v-else-if="step === 3" class="max-w-4xl mx-auto">
+      <div class="card text-center py-8">
+        <div class="text-success mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        
+        <h2 class="font-display text-2xl font-medium text-text-light mb-4">Payment Complete!</h2>
+        
+        <p class="text-text-muted mb-8">
+          The buyer has confirmed receipt of your UPI payment.
+          Your Bitcoin payment has been sent to your Lightning address.
+        </p>
+        
+        <div class="bg-success/10 border border-success/30 rounded-lg p-4 text-text-light mb-8 mx-auto max-w-md">
+          <h3 class="font-medium mb-2">Transaction Summary</h3>
+          <div class="text-left">
+            <div class="flex justify-between py-2 border-b border-border-dark">
+              <span class="text-text-muted">Order ID</span>
+              <span class="text-text-light font-mono">{{ selectedOrder?.id?.substring(0, 8) }}</span>
+            </div>
+            <div class="flex justify-between py-2 border-b border-border-dark">
+              <span class="text-text-muted">UPI Payment</span>
+              <span class="text-text-light">₹ {{ selectedOrder?.inrAmount }}</span>
+            </div>
+            <div class="flex justify-between py-2">
+              <span class="text-text-muted">Sats Received</span>
+              <span class="text-primary">{{ selectedOrder?.satAmount?.toLocaleString() }} sats</span>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- Step 2: Process Payment -->
-    <div v-if="step === 2" class="max-w-2xl mx-auto bg-white rounded-lg shadow-card p-6">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold">Process Payment</h2>
-        <div class="text-red-600 font-medium">
-          Time remaining: {{ formatTime(timeLeft) }}
-        </div>
-      </div>
-      
-      <div class="bg-gray-50 p-4 rounded mb-6">
-        <div class="grid grid-cols-2 gap-3">
-          <div class="text-gray-600">Order ID:</div>
-          <div class="font-medium">{{ selectedOrder.id }}</div>
-          
-          <div class="text-gray-600">Amount to pay:</div>
-          <div class="font-medium">₹{{ selectedOrder.amount }}</div>
-          
-          <div class="text-gray-600">UPI ID:</div>
-          <div class="font-medium">{{ selectedOrder.upiId }}</div>
-          
-          <div class="text-gray-600">You will receive:</div>
-          <div class="font-medium">{{ selectedOrder.satAmount + selectedOrder.profit }} sats</div>
-          
-          <div class="text-gray-600">Your profit:</div>
-          <div class="font-medium text-green-600">+{{ selectedOrder.profit }} sats</div>
-        </div>
-      </div>
-      
-      <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-6">
-        <p>Make the UPI payment of ₹{{ selectedOrder.amount }} to {{ selectedOrder.upiId }} and upload the payment receipt below.</p>
-      </div>
-      
-      <!-- Upload receipt -->
-      <div>
-        <h3 class="text-lg font-medium mb-2">Upload Payment Receipt</h3>
-        <div 
-          class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-upi-green transition-colors"
-          @click="$refs.receiptInput.click()"
+        
+        <button 
+          @click="resetProcess"
+          class="btn-secondary"
         >
-          <input 
-            type="file" 
-            ref="receiptInput"
-            @change="uploadReceipt"
-            accept="image/*"
-            class="hidden"
-          />
-          
-          <div>
-            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p class="mt-2 text-sm text-gray-600">Upload a screenshot of your payment receipt</p>
-            <p class="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-          </div>
-        </div>
-      </div>
-      
-      <button @click="step = 1" class="mt-4 text-upi-green hover:underline">
-        Cancel and return to order list
-      </button>
-    </div>
-    
-    <!-- Step 3: Waiting for confirmation -->
-    <div v-if="step === 3" class="max-w-2xl mx-auto bg-white rounded-lg shadow-card p-6">
-      <div class="text-center mb-6">
-        <div class="inline-block rounded-full bg-green-100 p-3 mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-upi-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h2 class="text-xl font-semibold">Receipt Uploaded Successfully!</h2>
-        <p class="text-gray-600 mt-2">Waiting for buyer to confirm payment receipt...</p>
-      </div>
-      
-      <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-lg mb-6">
-        <p class="text-sm">Do not close this window. Once the buyer confirms receipt, you will receive your Bitcoin payment automatically.</p>
-      </div>
-      
-      <div class="mt-8 text-center">
-        <button @click="step = 1" class="bg-upi-green hover:bg-upi-green/90 text-white px-6 py-2 rounded-lg">
-          Return to Marketplace
+          Find More Orders
         </button>
       </div>
     </div>

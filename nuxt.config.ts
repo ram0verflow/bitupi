@@ -6,6 +6,12 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
   ],
+  
+  router: {
+    options: {
+      strict: false
+    },
+  },
 
   tailwindcss: {
     cssPath: '~/assets/css/main.css',
@@ -21,13 +27,13 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { hid: 'description', name: 'description', content: 'Send Lightning Network payments directly to UPI accounts in India. No KYC, no accounts, just payments.' }
+        { name: 'description', content: 'Send Lightning Network payments directly to UPI accounts in India. No KYC, no accounts, just payments.' }
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap' }
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono&display=swap' }
       ]
     }
   },
@@ -52,6 +58,26 @@ export default defineNuxtConfig({
     {
       route: '/api/lightning-payment',
       handler: '~/server/api/lightning-payment.ts'
+    },
+    {
+      route: '/api/process-qr',
+      handler: '~/server/api/process-qr.ts'
+    },
+    {
+      route: '/api/create-order',
+      handler: '~/server/api/create-order.ts'
+    },
+    {
+      route: '/api/sse/exchange-rate',
+      handler: '~/server/api/sse/exchange-rate.ts'
+    },
+    {
+      route: '/api/sse/stats',
+      handler: '~/server/api/sse/stats.ts'
+    },
+    {
+      route: '/api/sse/order/:id',
+      handler: '~/server/api/sse/order/[id].ts'
     }
   ],
 
@@ -61,12 +87,12 @@ export default defineNuxtConfig({
     redisHost: process.env.REDIS_HOST || 'localhost',
     redisPort: process.env.REDIS_PORT || 6379,
     redisPassword: process.env.REDIS_PASSWORD || '',
-    
+
     // Variables also exposed to the client
     public: {
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
       wsUrl: process.env.WS_URL || 'http://localhost:3000',
-      
+
       // Feature flags
       enableRealExchangeRates: process.env.ENABLE_REAL_EXCHANGE_RATES === 'true' || false,
       enablePubSub: process.env.ENABLE_PUBSUB === 'true' || true,

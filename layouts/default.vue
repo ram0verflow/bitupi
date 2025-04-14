@@ -30,66 +30,58 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-dark-bg dark-transition">
-    <header class="bg-white dark:bg-dark-surface shadow-md border-t-4 border-lightning-blue dark:border-lightning-purple dark-transition">
-      <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
+  <div class="min-h-screen flex flex-col bg-bg-dark">
+    <header class="bg-bg-card shadow-md border-t-4 border-primary">
+      <nav class="container mx-auto px-6 py-5 flex justify-between items-center">
         <div class="flex items-center space-x-3">
           <NuxtLink to="/" class="flex items-center">
-            <span class="font-bold text-xl text-gray-800 dark:text-dark-text lightning-text">LN2UPI</span>
-            <span class="text-xs bg-blue-100 dark:bg-lightning-blue/20 text-lightning-blue dark:text-lightning-blue px-2 py-0.5 rounded-full border border-blue-200 dark:border-lightning-blue/30 ml-2 animate-pulse">Beta</span>
+            <div class="bg-bg-card rounded-xl px-3 py-2 border border-primary shadow-sm">
+              <span class="font-display font-bold text-xl text-primary">LN2UPI</span>
+            </div>
+            <span class="text-xs bg-primary text-text-light px-3 py-1 rounded-full ml-2">Beta</span>
           </NuxtLink>
         </div>
         
-        <div class="hidden md:flex items-center space-x-1">
-          <NuxtLink to="/" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-dark-border text-gray-700 dark:text-dark-text font-medium transition-colors" 
-                   :class="{ 'bg-gray-100 dark:bg-dark-border': $route.path === '/' }">
+        <div class="hidden md:flex items-center space-x-4">
+          <NuxtLink to="/" class="px-4 py-2 rounded-lg text-text-light font-medium transition-all hover:text-primary" 
+                   :class="{ 'text-primary': $route.path === '/' }">
             Home
           </NuxtLink>
-          <NuxtLink to="/send" class="px-3 py-2 rounded-md hover:bg-lightning-blue/10 text-lightning-blue font-medium transition-colors"
-                    :class="{ 'bg-lightning-blue/10': $route.path === '/send' }">
+          <NuxtLink to="/send" class="px-4 py-2 rounded-lg text-text-light font-medium transition-all hover:text-primary" 
+                   :class="{ 'text-primary': $route.path === '/send' }">
             Send to UPI
           </NuxtLink>
-          <NuxtLink to="/receive" class="px-3 py-2 rounded-md hover:bg-upi-green/10 text-upi-green font-medium transition-colors"
-                    :class="{ 'bg-upi-green/10': $route.path === '/receive' }">
+          <NuxtLink to="/receive" class="px-4 py-2 rounded-lg text-text-light font-medium transition-all hover:text-secondary" 
+                   :class="{ 'text-secondary': $route.path === '/receive' }">
             Receive Sats
           </NuxtLink>
-          <div class="ml-2 border-l border-gray-200 dark:border-dark-border pl-2">
-            <!-- Dark mode toggle -->
-            <button 
-              @click="toggleDarkMode" 
-              class="inline-flex items-center px-2 py-1 rounded text-sm font-medium hover:bg-gray-100 dark:hover:bg-dark-border transition-colors transform hover:scale-105"
-              :title="darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
-            >
-              <span v-if="!darkMode" class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              </span>
-              <span v-else class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </span>
-            </button>
-          </div>
+          
+          <!-- Dark Mode Toggle -->
+          <button @click="toggleDarkMode" class="p-2 rounded-lg hover:bg-bg-input transition-all">
+            <svg v-if="!darkMode" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </button>
         </div>
         
         <!-- Mobile menu -->
-        <div class="flex md:hidden space-x-2 items-center">
-          <NuxtLink to="/send" class="btn-glow px-3 py-1.5 rounded-md bg-lightning-blue text-white text-sm font-medium">
+        <div class="flex md:hidden space-x-3 items-center">
+          <NuxtLink to="/send" class="btn-primary py-2 px-3 text-sm">
             <span class="relative z-10">Send</span>
           </NuxtLink>
-          <NuxtLink to="/receive" class="btn-glow px-3 py-1.5 rounded-md bg-upi-green text-white text-sm font-medium">
+          <NuxtLink to="/receive" class="btn-secondary py-2 px-3 text-sm">
             <span class="relative z-10">Receive</span>
           </NuxtLink>
-          <button 
-            @click="toggleDarkMode" 
-            class="p-1.5 rounded-full text-sm ml-2 bg-gray-100 dark:bg-dark-border transform hover:scale-105"
-          >
-            <svg v-if="!darkMode" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          
+          <!-- Mobile Dark Mode Toggle -->
+          <button @click="toggleDarkMode" class="p-2 rounded-lg hover:bg-bg-input transition-all">
+            <svg v-if="!darkMode" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           </button>
@@ -101,44 +93,46 @@ onMounted(() => {
       <slot />
     </main>
     
-    <footer class="bg-white dark:bg-dark-surface border-t dark:border-dark-border mt-auto dark-transition">
-      <div class="container mx-auto px-4 py-6">
+    <footer class="bg-bg-card mt-auto border-t border-border-dark">
+      <div class="container mx-auto px-6 py-8">
         <!-- Top footer with info -->
-        <div class="flex flex-col md:flex-row justify-between pb-6 border-b border-gray-200 dark:border-dark-border">
-          <div class="mb-6 md:mb-0">
-            <h2 class="font-bold text-lg text-gray-800 dark:text-dark-text lightning-text mb-3">LN2UPI</h2>
-            <p class="text-sm text-gray-600 dark:text-dark-text-secondary max-w-xs">
+        <div class="flex flex-col md:flex-row justify-between pb-8 border-b border-border-dark">
+          <div class="mb-8 md:mb-0">
+            <div class="inline-block border border-primary rounded-xl px-4 py-2 mb-4 shadow-sm">
+              <h2 class="font-display font-bold text-xl text-primary">LN2UPI</h2>
+            </div>
+            <p class="text-text-muted max-w-xs">
               A tool for plebs, made by plebs. Send Lightning payments directly to UPI accounts in India.
             </p>
           </div>
           
-          <div class="grid grid-cols-2 gap-8">
+          <div class="grid grid-cols-2 gap-12">
             <div>
-              <h3 class="font-medium text-gray-900 dark:text-dark-text mb-2">Features</h3>
-              <ul class="text-sm text-gray-600 dark:text-dark-text-secondary space-y-2">
-                <li class="hover:text-lightning-blue dark:hover:text-lightning-blue transition-colors">No Accounts Needed</li>
-                <li class="hover:text-lightning-blue dark:hover:text-lightning-blue transition-colors">Zero KYC</li>
-                <li class="hover:text-lightning-blue dark:hover:text-lightning-blue transition-colors">Lightning Fast</li>
-                <li class="hover:text-lightning-blue dark:hover:text-lightning-blue transition-colors">Privacy Focused</li>
+              <h3 class="font-display font-medium text-primary mb-4">Features</h3>
+              <ul class="text-text-muted space-y-3">
+                <li class="hover:text-primary transition-colors">No Accounts Needed</li>
+                <li class="hover:text-primary transition-colors">Zero KYC</li>
+                <li class="hover:text-primary transition-colors">Lightning Fast</li>
+                <li class="hover:text-primary transition-colors">Privacy Focused</li>
               </ul>
             </div>
             
             <div>
-              <h3 class="font-medium text-gray-900 dark:text-dark-text mb-2">Resources</h3>
-              <ul class="text-sm text-gray-600 dark:text-dark-text-secondary space-y-2">
-                <li class="hover:text-upi-green dark:hover:text-upi-green transition-colors">How It Works</li>
-                <li class="hover:text-upi-green dark:hover:text-upi-green transition-colors">FAQ</li>
-                <li class="hover:text-upi-green dark:hover:text-upi-green transition-colors">GitHub</li>
-                <li class="hover:text-upi-green dark:hover:text-upi-green transition-colors">satoshinotebook.com</li>
+              <h3 class="font-display font-medium text-secondary mb-4">Resources</h3>
+              <ul class="text-text-muted space-y-3">
+                <li class="hover:text-secondary transition-colors">How It Works</li>
+                <li class="hover:text-secondary transition-colors">FAQ</li>
+                <li class="hover:text-secondary transition-colors">GitHub</li>
+                <li class="hover:text-secondary transition-colors">satoshinotebook.com</li>
               </ul>
             </div>
           </div>
         </div>
         
         <!-- Bottom footer with copyright -->
-        <div class="pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 dark:text-dark-text-secondary">
+        <div class="pt-8 flex flex-col md:flex-row justify-between items-center text-text-muted text-sm">
           <p>From plebs, for plebs. Just stack sats.</p>
-          <p class="mt-2 md:mt-0">No accounts. No KYC. No data storage.</p>
+          <p class="mt-3 md:mt-0">No accounts. No KYC. No data storage.</p>
         </div>
       </div>
     </footer>

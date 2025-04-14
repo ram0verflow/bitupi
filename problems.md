@@ -1,837 +1,175 @@
-[{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'orderId' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 141,
-	"startColumn": 30,
-	"endLineNumber": 141,
-	"endColumn": 37
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'orderId' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 142,
-	"startColumn": 40,
-	"endLineNumber": 142,
-	"endColumn": 47
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'invoiceId' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 146,
-	"startColumn": 26,
-	"endLineNumber": 146,
-	"endColumn": 35
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'invoiceId' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 147,
-	"startColumn": 42,
-	"endLineNumber": 147,
-	"endColumn": 51
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'id' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 177,
-	"startColumn": 24,
-	"endLineNumber": 177,
-	"endColumn": 26
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'id' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 178,
-	"startColumn": 28,
-	"endLineNumber": 178,
-	"endColumn": 30
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'amount' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 179,
-	"startColumn": 25,
-	"endLineNumber": 179,
-	"endColumn": 31
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'paymentHash' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 182,
-	"startColumn": 28,
-	"endLineNumber": 182,
-	"endColumn": 39
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'paymentHash' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 198,
-	"startColumn": 30,
-	"endLineNumber": 198,
-	"endColumn": 41
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'amount' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 200,
-	"startColumn": 27,
-	"endLineNumber": 200,
-	"endColumn": 33
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'id' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 205,
-	"startColumn": 23,
-	"endLineNumber": 205,
-	"endColumn": 25
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/lightning-payment.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'id' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 230,
-	"startColumn": 21,
-	"endLineNumber": 230,
-	"endColumn": 23
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/sse/exchange-rate.ts",
-	"owner": "typescript",
-	"code": "2307",
-	"severity": 8,
-	"message": "Cannot find module '~/server/utils/redis' or its corresponding type declarations.",
-	"source": "ts",
-	"startLineNumber": 3,
-	"startColumn": 53,
-	"endLineNumber": 3,
-	"endColumn": 75
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/sse/order/[id].ts",
-	"owner": "typescript",
-	"code": "2307",
-	"severity": 8,
-	"message": "Cannot find module '~/server/utils/redis' or its corresponding type declarations.",
-	"source": "ts",
-	"startLineNumber": 3,
-	"startColumn": 53,
-	"endLineNumber": 3,
-	"endColumn": 75
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/sse/stats.ts",
-	"owner": "typescript",
-	"code": "2307",
-	"severity": 8,
-	"message": "Cannot find module '~/server/utils/redis' or its corresponding type declarations.",
-	"source": "ts",
-	"startLineNumber": 3,
-	"startColumn": 53,
-	"endLineNumber": 3,
-	"endColumn": 75
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/stats.ts",
-	"owner": "typescript",
-	"code": "18047",
-	"severity": 8,
-	"message": "'results' is possibly 'null'.",
-	"source": "ts",
-	"startLineNumber": 39,
-	"startColumn": 7,
-	"endLineNumber": 39,
-	"endColumn": 14
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/stats.ts",
-	"owner": "typescript",
-	"code": "2345",
-	"severity": 8,
-	"message": "Argument of type 'unknown' is not assignable to parameter of type 'string'.",
-	"source": "ts",
-	"startLineNumber": 43,
-	"startColumn": 36,
-	"endLineNumber": 43,
-	"endColumn": 40
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/stats.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'rates' does not exist on type 'never'.",
-	"source": "ts",
-	"startLineNumber": 89,
-	"startColumn": 32,
-	"endLineNumber": 89,
-	"endColumn": 37
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/api/stats.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'transport' does not exist on type 'Server'.",
-	"source": "ts",
-	"startLineNumber": 90,
-	"startColumn": 42,
-	"endLineNumber": 90,
-	"endColumn": 51
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/index.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'withScope' does not exist on type 'ConsolaInstance'.",
-	"source": "ts",
-	"startLineNumber": 8,
-	"startColumn": 24,
-	"endLineNumber": 8,
-	"endColumn": 33
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/index.ts",
-	"owner": "typescript",
-	"code": "2702",
-	"severity": 8,
-	"message": "'ioredis' only refers to a type, but is being used as a namespace here.",
-	"source": "ts",
-	"startLineNumber": 11,
-	"startColumn": 18,
-	"endLineNumber": 11,
-	"endColumn": 25
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/index.ts",
-	"owner": "typescript",
-	"code": "2702",
-	"severity": 8,
-	"message": "'ioredis' only refers to a type, but is being used as a namespace here.",
-	"source": "ts",
-	"startLineNumber": 12,
-	"startColumn": 23,
-	"endLineNumber": 12,
-	"endColumn": 30
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/websockets/socket-server.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'withScope' does not exist on type 'ConsolaInstance'.",
-	"source": "ts",
-	"startLineNumber": 24,
-	"startColumn": 24,
-	"endLineNumber": 24,
-	"endColumn": 33
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/websockets/socket-server.ts",
-	"owner": "typescript",
-	"code": "18047",
-	"severity": 8,
-	"message": "'results' is possibly 'null'.",
-	"source": "ts",
-	"startLineNumber": 250,
-	"startColumn": 7,
-	"endLineNumber": 250,
-	"endColumn": 14
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/websockets/socket-server.ts",
-	"owner": "typescript",
-	"code": "2345",
-	"severity": 8,
-	"message": "Argument of type 'unknown' is not assignable to parameter of type 'string'.",
-	"source": "ts",
-	"startLineNumber": 254,
-	"startColumn": 36,
-	"endLineNumber": 254,
-	"endColumn": 40
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/server/websockets/socket-server.ts",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'transport' does not exist on type 'Server'.",
-	"source": "ts",
-	"startLineNumber": 292,
-	"startColumn": 36,
-	"endLineNumber": 292,
-	"endColumn": 45
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @tailwind",
-	"source": "css",
-	"startLineNumber": 1,
-	"startColumn": 1,
-	"endLineNumber": 1,
-	"endColumn": 10
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @tailwind",
-	"source": "css",
-	"startLineNumber": 2,
-	"startColumn": 1,
-	"endLineNumber": 2,
-	"endColumn": 10
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @tailwind",
-	"source": "css",
-	"startLineNumber": 3,
-	"startColumn": 1,
-	"endLineNumber": 3,
-	"endColumn": 10
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 8,
-	"startColumn": 5,
-	"endLineNumber": 8,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 12,
-	"startColumn": 5,
-	"endLineNumber": 12,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 18,
-	"startColumn": 5,
-	"endLineNumber": 18,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 22,
-	"startColumn": 5,
-	"endLineNumber": 22,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 26,
-	"startColumn": 5,
-	"endLineNumber": 26,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 30,
-	"startColumn": 5,
-	"endLineNumber": 30,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 34,
-	"startColumn": 5,
-	"endLineNumber": 34,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 38,
-	"startColumn": 5,
-	"endLineNumber": 38,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 43,
-	"startColumn": 5,
-	"endLineNumber": 43,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 48,
-	"startColumn": 5,
-	"endLineNumber": 48,
-	"endColumn": 11
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 59,
-	"startColumn": 3,
-	"endLineNumber": 59,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 64,
-	"startColumn": 3,
-	"endLineNumber": 64,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 69,
-	"startColumn": 3,
-	"endLineNumber": 69,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 74,
-	"startColumn": 3,
-	"endLineNumber": 74,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 78,
-	"startColumn": 3,
-	"endLineNumber": 78,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 97,
-	"startColumn": 3,
-	"endLineNumber": 97,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 101,
-	"startColumn": 3,
-	"endLineNumber": 101,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 106,
-	"startColumn": 3,
-	"endLineNumber": 106,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/assets/css/main.css",
-	"owner": "_generated_diagnostic_collection_name_#5",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 110,
-	"startColumn": 3,
-	"endLineNumber": 110,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 130,
-	"startColumn": 3,
-	"endLineNumber": 130,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 134,
-	"startColumn": 3,
-	"endLineNumber": 134,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 138,
-	"startColumn": 3,
-	"endLineNumber": 138,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 143,
-	"startColumn": 3,
-	"endLineNumber": 143,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 148,
-	"startColumn": 3,
-	"endLineNumber": 148,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 154,
-	"startColumn": 3,
-	"endLineNumber": 154,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 158,
-	"startColumn": 3,
-	"endLineNumber": 158,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 162,
-	"startColumn": 3,
-	"endLineNumber": 162,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 166,
-	"startColumn": 3,
-	"endLineNumber": 166,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 170,
-	"startColumn": 3,
-	"endLineNumber": 170,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/AnimatedRateCounter.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 175,
-	"startColumn": 3,
-	"endLineNumber": 175,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 220,
-	"startColumn": 3,
-	"endLineNumber": 220,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 224,
-	"startColumn": 3,
-	"endLineNumber": 224,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 228,
-	"startColumn": 3,
-	"endLineNumber": 228,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 234,
-	"startColumn": 3,
-	"endLineNumber": 234,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 238,
-	"startColumn": 3,
-	"endLineNumber": 238,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 242,
-	"startColumn": 3,
-	"endLineNumber": 242,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 246,
-	"startColumn": 3,
-	"endLineNumber": 246,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 251,
-	"startColumn": 3,
-	"endLineNumber": 251,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 255,
-	"startColumn": 3,
-	"endLineNumber": 255,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 259,
-	"startColumn": 3,
-	"endLineNumber": 259,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 263,
-	"startColumn": 3,
-	"endLineNumber": 263,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 268,
-	"startColumn": 3,
-	"endLineNumber": 268,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 272,
-	"startColumn": 3,
-	"endLineNumber": 272,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 276,
-	"startColumn": 3,
-	"endLineNumber": 276,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 281,
-	"startColumn": 3,
-	"endLineNumber": 281,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 285,
-	"startColumn": 3,
-	"endLineNumber": 285,
-	"endColumn": 9
-},{
-	"resource": "/Users/abhiramam/Desktop/Projects/bitupi/components/PlatformStats.vue",
-	"owner": "_generated_diagnostic_collection_name_#3",
-	"code": "unknownAtRules",
-	"severity": 4,
-	"message": "Unknown at rule @apply",
-	"source": "css",
-	"startLineNumber": 289,
-	"startColumn": 3,
-	"endLineNumber": 289,
-	"endColumn": 9
-}]
+[9:43:39 AM]  WARN  [vite:css][postcss] @import must precede all other statements (besides @charset or empty @layer)
+4  |  
+5  |  /* Import Space Grotesk font */
+6  |  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono&display=swap');
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7  |  
+8  |  @layer base {
+
+[nitro 9:43:41 AM] ✔ Nuxt Nitro server built in 1777ms
+[9:43:41 AM] ℹ Vite client warmed up in 3ms
+
+[9:43:41 AM]  WARN  [vite:css][postcss] @import must precede all other statements (besides @charset or empty @layer)
+4  |  
+5  |  /* Import Space Grotesk font */
+6  |  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono&display=swap');
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7  |  
+8  |  @layer base { (x2)
+
+[server] ℹ Starting LN2UPI server...
+Redis client connected
+
+[server]  WARN  Redis server recently restarted, clearing stale connection data
+
+[server] ✔ Redis connection established successfully
+[server] ℹ SQLite support is ready for implementation if needed
+[websocket] ✔ Redis subscriber setup complete
+[websocket] ✔ Socket.io server initialized successfully
+[websocket] ℹ Redis subscriptions established for order:update, exchange:update, stats:update
+[server] ✔ WebSocket server initialized successfully
+[9:43:43 AM] ℹ Vite server warmed up in 1835ms
+
+[9:43:44 AM]  ERROR  Internal server error: [postcss] /Users/abhiramam/Desktop/Projects/bitupi/components/ConnectionStatus.vue?vue&type=style&index=0&scoped=c5adaebf&lang.css:35:3: The bg-error-red class does not exist. If bg-error-red is a custom class, make sure it is defined within a @layer directive.
+  Plugin: vite:css
+  File: /Users/abhiramam/Desktop/Projects/bitupi/components/ConnectionStatus.vue?vue&type=style&index=0&scoped=c5adaebf&lang.css:115:2
+  33 |  
+  34 |  .disconnected .status-dot {
+  35 |    @apply bg-error-red;
+     |    ^
+  36 |    box-shadow: 0 0 8px rgba(255, 82, 82, 0.7);
+  37 |  }
+      at Input.error (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/postcss/lib/input.js:113:16)
+      at AtRule.error (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/postcss/lib/node.js:149:32)
+      at processApply (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/lib/expandApplyAtRules.js:380:29)
+      at /Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/lib/expandApplyAtRules.js:551:9
+      at /Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/processTailwindFeatures.js:55:50
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async plugins (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/plugin.js:38:17)
+      at async LazyResult.runAsync (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/postcss/lib/lazy-result.js:293:11)
+      at async compileCSS (file:///Users/abhiramam/Desktop/Projects/bitupi/node_modules/vite/dist/node/chunks/dep-Bid9ssRr.js:49180:21)
+      at async TransformPluginContext.transform (file:///Users/abhiramam/Desktop/Projects/bitupi/node_modules/vite/dist/node/chunks/dep-Bid9ssRr.js:48361:11)
+
+
+[9:43:44 AM]  WARN  [vite:css][postcss] @import must precede all other statements (besides @charset or empty @layer)
+4  |  
+5  |  /* Import Space Grotesk font */
+6  |  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono&display=swap');
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7  |  
+8  |  @layer base {
+
+
+[9:43:45 AM]  WARN  [vite:css][postcss] @import must precede all other statements (besides @charset or empty @layer)
+4  |  
+5  |  /* Import Space Grotesk font */
+6  |  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono&display=swap');
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7  |  
+8  |  @layer base { (x2)
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+[9:43:46 AM]  ERROR  [unhandledRejection] read ECONNRESET
+
+    at TCP.onStreamRead (node:internal/stream_base_commons:217:20)
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+[9:43:47 AM]  ERROR  [unhandledRejection] read ECONNRESET
+
+    at TCP.onStreamRead (node:internal/stream_base_commons:217:20)
+
+
+[9:43:48 AM]  ERROR  Internal server error: [postcss] /Users/abhiramam/Desktop/Projects/bitupi/components/ConnectionStatus.vue?vue&type=style&index=0&scoped=c5adaebf&lang.css:35:3: The bg-error-red class does not exist. If bg-error-red is a custom class, make sure it is defined within a @layer directive.
+  Plugin: vite:css
+  File: /Users/abhiramam/Desktop/Projects/bitupi/components/ConnectionStatus.vue?vue&type=style&index=0&scoped=c5adaebf&lang.css:115:2
+  33 |  
+  34 |  .disconnected .status-dot {
+  35 |    @apply bg-error-red;
+     |    ^
+  36 |    box-shadow: 0 0 8px rgba(255, 82, 82, 0.7);
+  37 |  }
+      at Input.error (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/postcss/lib/input.js:113:16)
+      at AtRule.error (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/postcss/lib/node.js:149:32)
+      at processApply (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/lib/expandApplyAtRules.js:380:29)
+      at /Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/lib/expandApplyAtRules.js:551:9
+      at /Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/processTailwindFeatures.js:55:50
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async plugins (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/tailwindcss/lib/plugin.js:38:17)
+      at async LazyResult.runAsync (/Users/abhiramam/Desktop/Projects/bitupi/node_modules/postcss/lib/lazy-result.js:293:11)
+      at async compileCSS (file:///Users/abhiramam/Desktop/Projects/bitupi/node_modules/vite/dist/node/chunks/dep-Bid9ssRr.js:49180:21)
+      at async TransformPluginContext.transform (file:///Users/abhiramam/Desktop/Projects/bitupi/node_modules/vite/dist/node/chunks/dep-Bid9ssRr.js:48361:11)
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+[9:43:48 AM]  ERROR  [unhandledRejection] read ECONNRESET
+
+    at TCP.onStreamRead (node:internal/stream_base_commons:217:20)
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+[9:43:49 AM]  ERROR  [unhandledRejection] read ECONNRESET
+
+    at TCP.onStreamRead (node:internal/stream_base_commons:217:20)
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/?EIO=4&transport=websocket"
+
+
+ WARN  [Vue Router warn]: No match found for location with path "/socket.io/"
+
+
+[9:43:51 AM]  ERROR  [unhandledRejection] read ECONNRESET
+
+    at TCP.onStreamRead (node:internal/stream_base_commons:217:20)

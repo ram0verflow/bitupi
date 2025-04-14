@@ -1,167 +1,140 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useNuxtApp } from '#app';
 
-const nuxtApp = useNuxtApp();
-const connectionStatus = ref('connecting');
-const transportType = ref('initializing');
-const isVisible = ref(false);
-const showDetails = ref(false);
-const reconnectAttempt = ref(0);
+// Connection status can be 'connected', 'connecting', or 'disconnected'
+const status = ref('connecting');
+const statusMessage = ref('Connecting...');
+const showStatusDetails = ref(false);
+const socket = ref(null);
 
-function updateStatus(status) {
-  connectionStatus.value = status;
-  if (status === 'connecting') {
-    reconnectAttempt.value++;
-  } else {
-    reconnectAttempt.value = 0;
+onMounted(() => {
+  // Check if we're on the client side
+  if (process.client) {
+    // Get the socket from the Nuxt app context
+    socket.value = window.$nuxt?.$socket;
+    
+    if (socket.value) {
+      // Listen for socket events
+      socket.value.on('connect', () => {
+        status.value = 'connected';
+        statusMessage.value = 'Connected';
+      });
+      
+      socket.value.on('disconnect', () => {
+        status.value = 'disconnected';
+        statusMessage.value = 'Disconnected';
+      });
+      
+      socket.value.on('connect_error', (error) => {
+        status.value = 'disconnected';
+        statusMessage.value = `Connection error: ${error.message}`;
+      });
+      
+      socket.value.on('connect_timeout', () => {
+        status.value = 'disconnected';
+        statusMessage.value = 'Connection timeout';
+      });
+      
+      socket.value.on('reconnecting', (attemptNumber) => {
+        status.value = 'connecting';
+        statusMessage.value = `Reconnecting (attempt ${attemptNumber})...`;
+      });
+      
+      // Check initial connection status
+      if (socket.value.connected) {
+        status.value = 'connected';
+        statusMessage.value = 'Connected';
+      } else {
+        status.value = 'connecting';
+        statusMessage.value = 'Connecting...';
+      }
+    } else {
+      status.value = 'disconnected';
+      statusMessage.value = 'Socket not initialized';
+    }
+    
+    // Fallback using SSE if socket fails
+    const checkSocketTimeout = setTimeout(() => {
+      if (status.value !== 'connected') {
+        initSSEFallback();
+      }
+    }, 5000);
+    
+    return () => clearTimeout(checkSocketTimeout);
+  }
+});
+
+function initSSEFallback() {
+  // Only initialize SSE if we're on client and socket isn't working
+  if (!process.client || status.value === 'connected') return;
+  
+  try {
+    const eventSource = new EventSource('/api/sse/stats');
+    
+    eventSource.onopen = () => {
+      status.value = 'connected';
+      statusMessage.value = 'Connected (SSE)';
+    };
+    
+    eventSource.onerror = () => {
+      if (status.value === 'connected') {
+        status.value = 'disconnected';
+        statusMessage.value = 'SSE Connection lost';
+      }
+    };
+    
+    onUnmounted(() => {
+      eventSource.close();
+    });
+  } catch (error) {
+    console.error('Failed to initialize SSE:', error);
   }
 }
 
-function updateTransport(transport) {
-  transportType.value = transport || 'unknown';
+function toggleStatusDetails() {
+  showStatusDetails.value = !showStatusDetails.value;
 }
-
-function toggleDetails() {
-  showDetails.value = !showDetails.value;
-}
-
-onMounted(() => {
-  // Show after a short delay to avoid flashing during initial load
-  setTimeout(() => {
-    isVisible.value = true;
-  }, 1500);
-
-  // Connection status listener
-  nuxtApp.hook('socket:connection-status', (status) => {
-    updateStatus(status);
-  });
-
-  // Transport type listener
-  nuxtApp.hook('socket:transport-change', (transport) => {
-    updateTransport(transport);
-  });
-});
-
-onUnmounted(() => {
-  // Clean up if needed
-});
 </script>
 
 <template>
-  <div 
-    v-if="isVisible" 
-    class="connection-status"
-    :class="{ 
-      'connected': connectionStatus === 'connected',
-      'connecting': connectionStatus === 'connecting',
-      'disconnected': connectionStatus === 'disconnected',
-      'expanded': showDetails
-    }"
-    @click="toggleDetails"
-  >
-    <div class="status-indicator">
-      <div class="status-dot"></div>
-      <span class="status-text">{{ connectionStatus }}</span>
-    </div>
-    
-    <div v-if="showDetails" class="connection-details fade-in">
-      <div class="transport-info">
-        <span class="label">Transport:</span>
-        <span class="value">{{ transportType }}</span>
-      </div>
-      <div v-if="reconnectAttempt > 0" class="reconnect-info">
-        <span class="label">Reconnect attempts:</span>
-        <span class="value">{{ reconnectAttempt }}</span>
+  <div class="fixed bottom-4 right-4 z-50">
+    <div class="relative">
+      <!-- Status indicator button -->
+      <button 
+        @click="toggleStatusDetails" 
+        class="flex items-center space-x-2 bg-bg-card py-2 px-3 rounded-full shadow-md border border-border-dark hover:border-primary transition-all"
+      >
+        <div :class="[
+          'status-dot',
+          status === 'connected' ? 'connected' : 
+          status === 'connecting' ? 'connecting' : 'disconnected'
+        ]"></div>
+        <span v-if="showStatusDetails" class="text-sm text-text-light">{{ statusMessage }}</span>
+      </button>
+      
+      <!-- Detailed status info popup -->
+      <div 
+        v-if="showStatusDetails"
+        class="absolute bottom-full right-0 mb-2 p-4 bg-bg-card rounded-lg shadow-lg border border-border-dark w-64 fade-in"
+      >
+        <h4 class="font-display text-sm font-medium text-text-light mb-2">Connection Status</h4>
+        <div class="flex items-center space-x-2 mb-3">
+          <div :class="[
+            'status-dot',
+            status === 'connected' ? 'connected' : 
+            status === 'connecting' ? 'connecting' : 'disconnected'
+          ]"></div>
+          <p class="text-sm text-text-light">{{ statusMessage }}</p>
+        </div>
+        <p class="text-xs text-text-muted">
+          {{ status === 'connected' 
+            ? 'You are connected to the real-time service' 
+            : status === 'connecting' 
+              ? 'Trying to establish connection...'
+              : 'Connection to real-time service lost. Retrying...'
+          }}
+        </p>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.connection-status {
-  @apply fixed bottom-4 right-4 bg-white dark:bg-dark-surface rounded-full shadow-md 
-  border border-gray-200 dark:border-dark-border px-3 py-1.5 text-xs cursor-pointer z-50;
-  transition: all 0.3s ease;
-}
-
-.connection-status:hover {
-  transform: translateY(-2px);
-  @apply shadow-lg;
-}
-
-.connection-status.expanded {
-  @apply rounded-lg;
-  transform: translateY(-2px);
-}
-
-.status-indicator {
-  @apply flex items-center;
-}
-
-.status-dot {
-  @apply h-2 w-2 rounded-full mr-2;
-}
-
-.connected .status-dot {
-  @apply bg-green-500;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-}
-
-.connecting .status-dot {
-  @apply bg-yellow-400;
-  animation: pulse 1.5s infinite;
-}
-
-.disconnected .status-dot {
-  @apply bg-red-500;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
-}
-
-.status-text {
-  @apply font-medium capitalize;
-}
-
-.connected .status-text {
-  @apply text-green-600 dark:text-green-400;
-}
-
-.connecting .status-text {
-  @apply text-yellow-600 dark:text-yellow-400;
-}
-
-.disconnected .status-text {
-  @apply text-red-600 dark:text-red-400;
-}
-
-.connection-details {
-  @apply mt-2 pt-2 border-t border-gray-200 dark:border-dark-border;
-}
-
-.transport-info, .reconnect-info {
-  @apply flex justify-between items-center text-gray-600 dark:text-dark-text-secondary mb-1;
-}
-
-.label {
-  @apply mr-3 opacity-70;
-}
-
-.value {
-  @apply font-mono font-medium;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-}
-</style>

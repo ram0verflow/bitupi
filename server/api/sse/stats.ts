@@ -49,7 +49,8 @@ export default defineEventHandler(async (event) => {
       const results = await pipeline.exec();
       
       // Process results
-      results.forEach(([err, data]) => {
+      results.forEach((result) => {
+        const [err, data] = result as [Error | null, string];
         if (err) return;
         
         try {
@@ -106,6 +107,7 @@ export default defineEventHandler(async (event) => {
   // Handle incoming messages from Redis PubSub
   subscriber.on('message', (channel, message) => {
     if (channel === 'platform:stats:update') {
+      console.log('SSE received platform stats update');
       stream.push(`data: ${message}\n\n`);
     }
   });

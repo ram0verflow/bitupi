@@ -1,3 +1,6 @@
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Space+Mono&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,31 +8,98 @@
 @layer base {
   html {
     font-family: 'Poppins', system-ui, sans-serif;
-    @apply text-gray-800 dark:text-dark-text;
+    @apply text-text-light bg-bg-dark;
   }
   
   body {
-    @apply bg-gray-50 dark:bg-dark-bg transition-colors;
+    @apply bg-bg-dark transition-colors;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-medium;
   }
 }
 
 @layer components {
+  /* Primary Button */
   .btn-primary {
-    @apply px-4 py-2 bg-lightning-blue text-white rounded-md hover:bg-lightning-blue/90 transition-colors;
-  }
-
-  .btn-secondary {
-    @apply px-4 py-2 bg-upi-green text-white rounded-md hover:bg-upi-green/90 transition-colors;
-  }
-
-  .btn-outline {
-    @apply px-4 py-2 border border-gray-300 dark:border-dark-border rounded-md hover:bg-gray-100 dark:hover:bg-dark-surface transition-colors;
-  }
-
-  .card {
-    @apply bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark border border-gray-200 dark:border-dark-border p-4;
+    @apply px-5 py-3 bg-primary text-text-light rounded-lg border-0 font-medium transition-all duration-200;
   }
   
+  .btn-primary:hover {
+    @apply bg-primary-dark shadow-primary;
+  }
+  
+  .btn-primary:active {
+    @apply transform scale-[0.98];
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply px-5 py-3 bg-secondary text-text-light rounded-lg border-0 font-medium transition-all duration-200;
+  }
+  
+  .btn-secondary:hover {
+    @apply bg-secondary-dark shadow-secondary;
+  }
+  
+  .btn-secondary:active {
+    @apply transform scale-[0.98];
+  }
+
+  /* Outline Button */
+  .btn-outline-primary {
+    @apply px-5 py-3 bg-transparent text-primary rounded-lg border border-primary font-medium transition-all duration-200;
+  }
+  
+  .btn-outline-primary:hover {
+    @apply bg-primary/10 border-primary;
+  }
+  
+  .btn-outline-secondary {
+    @apply px-5 py-3 bg-transparent text-secondary rounded-lg border border-secondary font-medium transition-all duration-200;
+  }
+  
+  .btn-outline-secondary:hover {
+    @apply bg-secondary/10 border-secondary;
+  }
+
+  /* Dark Button */
+  .btn-dark {
+    @apply px-5 py-3 bg-bg-card text-text-light rounded-lg border border-border-dark font-medium transition-all duration-200;
+  }
+  
+  .btn-dark:hover {
+    @apply bg-bg-input border-primary/50;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-bg-card rounded-lg shadow-md border border-border-dark p-6;
+  }
+  
+  .card-active {
+    @apply bg-bg-card rounded-lg shadow-primary border border-primary/30 p-6;
+  }
+  
+  .card-success {
+    @apply bg-bg-card rounded-lg shadow-secondary border border-secondary/30 p-6;
+  }
+
+  /* Forms */
+  .input {
+    @apply px-4 py-3 bg-bg-input text-text-light rounded-lg border border-border-dark outline-none w-full transition-colors duration-200;
+  }
+  
+  .input:focus {
+    @apply border-primary shadow-sm;
+  }
+  
+  .input-error {
+    @apply border-error;
+  }
+
+  /* Sections */
   .section {
     @apply py-12;
   }
@@ -37,212 +107,11 @@
   .container {
     @apply px-4 mx-auto max-w-7xl;
   }
-  
-  /* Animated buttons */
-  .btn-glow {
-    @apply relative overflow-hidden;
-  }
-  
-  .btn-glow::after {
-    content: '';
-    @apply absolute top-0 left-[-100%] w-full h-full bg-white/20;
-    transition: left 0.5s;
-  }
-  
-  .btn-glow:hover::after {
-    left: 100%;
-  }
 }
 
-/* Dark-mode transition */
-.dark-transition {
-  @apply transition-colors duration-300;
-}
-
-/* Lightning Network styles */
-.lightning-text {
-  @apply text-lightning-blue dark:text-lightning-blue;
-  text-shadow: 0 0 10px rgba(0, 80, 255, 0.2);
-}
-
-.upi-text {
-  @apply text-upi-green dark:text-upi-green;
-  text-shadow: 0 0 10px rgba(9, 113, 64, 0.2);
-}
-
-.lightning-bg {
-  @apply bg-lightning-blue text-white;
-}
-
-.lightning-gradient {
-  @apply bg-gradient-to-r from-lightning-blue via-lightning-purple to-lightning-blue;
-  background-size: 200% 100%;
-  animation: gradientShift 5s ease infinite;
-  @apply shadow-glow-blue dark:shadow-glow-purple;
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* UPI Gradient */
-.upi-gradient {
-  @apply bg-gradient-to-r from-upi-green via-upi-purple to-upi-green;
-  background-size: 200% 100%;
-  animation: gradientShift 5s ease infinite;
-  @apply shadow-glow-green;
-}
-
-/* UPI Colors and styles */
-.upi-text {
-  @apply text-upi-green dark:text-upi-green;
-}
-
-.upi-bg {
-  @apply bg-upi-green text-white;
-}
-
-/* Bitcoin Colors and styles */
-.bitcoin-text {
-  @apply text-bitcoin-orange dark:text-bitcoin-orange;
-}
-
-.bitcoin-bg {
-  @apply bg-bitcoin-orange text-white;
-}
-
-/* Animated stats cards */
-.stat-card {
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.15);
-}
-
-/* Shimmer loading effect */
-.shimmer {
-  position: relative;
-  overflow: hidden;
-  background: #f6f7f8;
-}
-
-.dark .shimmer {
-  background: #2A2A40;
-}
-
-.shimmer::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.3) 20%,
-    rgba(255, 255, 255, 0.6) 60%,
-    rgba(255, 255, 255, 0)
-  );
-  animation: shimmer 1.5s infinite;
-}
-
-.dark .shimmer::after {
-  background-image: linear-gradient(
-    90deg,
-    rgba(0, 114, 255, 0) 0,
-    rgba(0, 114, 255, 0.1) 20%,
-    rgba(110, 68, 255, 0.2) 60%,
-    rgba(0, 114, 255, 0)
-  );
-}
-
-/* Pulse shadow animation */
-.pulse-shadow {
-  animation: pulse-shadow 2s infinite;
-}
-
-@keyframes pulse-shadow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(0, 114, 255, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 20px rgba(110, 68, 255, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 114, 255, 0);
-  }
-}
-
-.pulse-shadow-green {
-  animation: pulse-shadow-green 2s infinite;
-}
-
-@keyframes pulse-shadow-green {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 161, 85, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 20px rgba(16, 161, 85, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 161, 85, 0);
-  }
-}
-
-.pulse-shadow-orange {
-  animation: pulse-shadow-orange 2s infinite;
-}
-
-@keyframes pulse-shadow-orange {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 153, 0, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 20px rgba(255, 153, 0, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 153, 0, 0);
-  }
-}
-
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-/* Floating animation */
-.floating {
-  animation: floating 3s ease-in-out infinite;
-}
-
-@keyframes floating {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
-}
-
-/* Fade in animations */
+/* Animation classes */
 .fade-in {
-  animation: fadeIn 0.6s ease-in;
+  animation: fadeIn 0.3s ease-in;
 }
 
 @keyframes fadeIn {
@@ -250,31 +119,51 @@
   to { opacity: 1; }
 }
 
-/* Number counter animation */
-.count-up {
-  counter-reset: count 0;
-  animation: count-up 2s forwards;
+/* Bitcoin/Lightning Network styles */
+.bitcoin-text {
+  @apply text-bitcoin font-semibold;
 }
 
-@keyframes count-up {
-  from { counter-increment: count 0; }
-  to { counter-increment: count var(--value); }
+.lightning-text {
+  @apply text-lightning font-semibold;
 }
 
-/* Typing animation */
-.typing {
-  border-right: 2px solid;
-  white-space: nowrap;
-  overflow: hidden;
-  animation: typing 3.5s steps(30, end), blink 1s step-end infinite;
+.upi-text {
+  @apply text-upi font-semibold;
 }
 
-@keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
+/* Status classes */
+.status-dot {
+  @apply h-3 w-3 rounded-full;
 }
 
-@keyframes blink {
-  from, to { border-color: transparent; }
-  50% { border-color: currentColor; }
+.status-dot.connected {
+  @apply bg-success;
+  box-shadow: 0 0 5px rgba(0, 200, 83, 0.7);
+}
+
+.status-dot.connecting {
+  @apply bg-warning;
+  animation: pulse 1.5s infinite;
+}
+
+.status-dot.disconnected {
+  @apply bg-error;
+  box-shadow: 0 0 5px rgba(255, 82, 82, 0.7);
+}
+
+/* Simple pulse animation */
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
 }

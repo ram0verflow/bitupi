@@ -12,37 +12,67 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Lightning colors - brighter and more vibrant
-        'lightning-blue': '#0072FF',
-        'lightning-purple': '#6E44FF',
-        // UPI colors - more saturated
-        'upi-green': '#10A155', 
-        'upi-purple': '#8A56B8',
-        // Core UI colors - higher contrast
-        'dark-bg': '#0A0A1A',
-        'dark-surface': '#121225',
-        'dark-border': '#2A2A40',
-        'dark-text': '#F5F5FF',
-        'dark-text-secondary': '#B6B6CC',
-        // Bitcoin colors - more vivid
-        'bitcoin-orange': '#FF9900',
-        // Additional accent colors
-        'success-green': '#00E676',
-        'error-red': '#FF5252',
-        'warning-yellow': '#FFD740',
-        'info-blue': '#40C4FF',
+        // Primary color scheme - Orange
+        'primary': '#FF5F00',       // Bitcoin orange
+        'primary-dark': '#CC4D00',  // Darker orange for hover states
+        'primary-light': '#FF8533', // Lighter orange for accents
+        
+        // Secondary color - Green
+        'secondary': '#00C853',     // UPI green
+        'secondary-dark': '#00A243', // Darker green for hover states
+        'secondary-light': '#5EFF8B', // Lighter green for accents
+        
+        // Background colors
+        'bg-dark': '#121212',      // Dark background
+        'bg-card': '#1E1E1E',      // Card background
+        'bg-input': '#2A2A2A',     // Input background
+        'bg-light': '#FFFFFF',     // Light background
+        
+        // Border colors
+        'border-dark': '#333333',  // Dark border
+        'border-light': '#E0E0E0', // Light border
+        
+        // Text colors
+        'text-dark': '#121212',    // Dark text
+        'text-light': '#FFFFFF',   // Light text
+        'text-muted': '#9E9E9E',   // Muted text
+        
+        // Bitcoin & UPI specific colors
+        'bitcoin': '#FF9900',      // Bitcoin color
+        'lightning': '#FC5C04',    // Lightning network
+        'upi': '#00C853',          // UPI green
+        
+        // Status colors
+        'success': '#00C853',      // Success
+        'warning': '#FFC107',      // Warning
+        'error': '#FF5252',        // Error
+        'info': '#2196F3'          // Info
       },
       fontFamily: {
         'sans': ['Poppins', 'system-ui', 'sans-serif'],
+        'display': ['Space Grotesk', 'system-ui', 'sans-serif'],
+        'mono': ['Space Mono', 'monospace'],
       },
       boxShadow: {
-        'card': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        'card-dark': '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2)',
-        'button': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        'glow-blue': '0 0 15px rgba(0, 114, 255, 0.6)',
-        'glow-purple': '0 0 15px rgba(110, 68, 255, 0.6)',
-        'glow-green': '0 0 15px rgba(16, 161, 85, 0.6)',
-        'glow-orange': '0 0 15px rgba(255, 153, 0, 0.6)',
+        // Simple, clean shadows for high contrast
+        'sm': '0 1px 2px rgba(0, 0, 0, 0.1)',
+        'DEFAULT': '0 2px 4px rgba(0, 0, 0, 0.1)',
+        'md': '0 4px 8px rgba(0, 0, 0, 0.12)',
+        'lg': '0 8px 16px rgba(0, 0, 0, 0.14)',
+        'xl': '0 16px 24px rgba(0, 0, 0, 0.16)',
+        '2xl': '0 24px 32px rgba(0, 0, 0, 0.18)',
+        
+        // Colored shadows for accents
+        'primary': '0 4px 12px rgba(255, 95, 0, 0.4)',
+        'secondary': '0 4px 12px rgba(0, 200, 83, 0.4)',
+        
+        // Inner shadows
+        'inner': 'inset 0 2px 4px rgba(0, 0, 0, 0.1)',
+        'inner-lg': 'inset 0 4px 8px rgba(0, 0, 0, 0.2)',
+        
+        // Glows for notifications and active states
+        'glow-primary': '0 0 15px rgba(255, 95, 0, 0.6)',
+        'glow-secondary': '0 0 15px rgba(0, 200, 83, 0.6)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',

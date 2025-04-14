@@ -182,5 +182,14 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled rejection:', reason);
+  
+  // If it's an ECONNRESET, it's likely a dropped connection which is normal
+  if (reason instanceof Error && reason.message.includes('ECONNRESET')) {
+    logger.info('Connection reset by client - this is normal behavior');
+    return;
+  }
+  
+  // For other errors, we should log them
+  logger.error('Promise:', promise);
 });

@@ -1,248 +1,278 @@
 <script setup>
-import { ref } from 'vue';
-import UpiLogo from '~/components/UpiLogo.vue';
-import BhimLogo from '~/components/BhimLogo.vue';
-import IndianContextTip from '~/components/IndianContextTip.vue';
-import PlatformStats from '~/components/PlatformStats.vue';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
 
-// Fetch the exchange rate
-const { data: exchangeRate } = await useFetch('/api/exchange-rate');
-const currentRate = ref(exchangeRate.value?.rates?.BTC_INR || 5600000);
+const router = useRouter();
+const currentRate = ref(0);
+const isLoading = ref(true);
 
-// Calculate satoshi rate
-const satoshiRate = ref(Math.round((currentRate.value / 100000000) * 1000) / 1000);
+// Function to navigate to send or receive pages
+function navigateTo(path) {
+  router.push(path);
+}
+
+// Get current BTC to INR exchange rate
+async function fetchExchangeRate() {
+  try {
+    isLoading.value = true;
+    const response = await fetch('/api/exchange-rate');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch exchange rate');
+    }
+    
+    const data = await response.json();
+    currentRate.value = data.rate;
+  } catch (error) {
+    console.error('Error fetching exchange rate:', error);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+// Set up SSE for real-time rate updates
+function setupRateUpdates() {
+  if (process.client) {
+    try {
+      const eventSource = new EventSource('/api/sse/exchange-rate');
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.rate) {
+            currentRate.value = data.rate;
+          }
+        } catch (e) {
+          console.error('Error parsing SSE message:', e);
+        }
+      };
+      
+      eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        // Reconnect after a delay
+        setTimeout(() => setupRateUpdates(), 5000);
+      };
+      
+      // Cleanup on component unmount
+      onUnmounted(() => {
+        eventSource.close();
+      });
+    } catch (error) {
+      console.error('Failed to initialize SSE:', error);
+    }
+  }
+}
+
+onMounted(() => {
+  fetchExchangeRate();
+  setupRateUpdates();
+});
 </script>
 
 <template>
   <div>
     <!-- Hero Section -->
-    <section class="py-10 md:py-16">
-      <div class="container text-center max-w-4xl mx-auto">
-        <div class="inline-flex items-center bg-gray-100 dark:bg-dark-surface px-4 py-2 rounded-full mb-6">
-          <span class="text-sm font-medium text-gray-800 dark:text-dark-text">For Plebs</span>
-          <span class="mx-2 text-gray-400">•</span>
-          <span class="text-sm font-medium text-gray-800 dark:text-dark-text">No KYC</span>
-          <span class="mx-2 text-gray-400">•</span>
-          <span class="text-sm font-medium text-gray-800 dark:text-dark-text">Just Works</span>
-        </div>
-        
-        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-dark-text mb-6 leading-tight">
-          <span class="lightning-text">Lightning</span>
-          <span class="mx-2">to</span>
-          <span class="upi-text">UPI</span>
-          <br>Direct Payments
-        </h1>
-        
-        <p class="text-xl text-gray-600 dark:text-dark-text-secondary max-w-2xl mx-auto mb-10">
-          A simple tool that lets you send sats directly to UPI accounts in India. 
-          No middlemen, no accounts, no KYC. Made by plebs, for plebs.
-        </p>
-        
-        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-16">
-          <NuxtLink to="/send" class="btn-glow bg-lightning-blue hover:bg-lightning-blue/90 text-white font-bold py-4 px-8 rounded-lg shadow-lg text-xl transition-colors inline-flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
-            </svg>
-            <span class="relative z-10">Send to UPI</span>
-          </NuxtLink>
-          <NuxtLink to="/receive" class="btn-glow bg-upi-green hover:bg-upi-green/90 text-white font-bold py-4 px-8 rounded-lg shadow-lg text-xl transition-colors inline-flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-            </svg>
-            <span class="relative z-10">Receive Sats</span>
-          </NuxtLink>
-        </div>
-        
-        <!-- Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-10">
-          <div class="col-span-2 md:col-span-4">
-            <AnimatedRateCounter :initial-value="currentRate" />
-          </div>
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border hover:shadow-lg transition-all">
-            <div class="text-3xl font-bold text-upi-green floating">0%</div>
-            <div class="text-sm text-gray-600 dark:text-dark-text-secondary">KYC Required</div>
-          </div>
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border hover:shadow-lg transition-all">
-            <div class="text-3xl font-bold text-lightning-purple floating">1%</div>
-            <div class="text-sm text-gray-600 dark:text-dark-text-secondary">Service Fee</div>
-          </div>
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark p-4 dark:border dark:border-dark-border hover:shadow-lg transition-all">
-            <div class="text-3xl font-bold text-bitcoin-orange floating">24/7</div>
-            <div class="text-sm text-gray-600 dark:text-dark-text-secondary">Availability</div>
-          </div>
-        </div>
-        
-        <!-- Platform Stats -->
-        <div class="max-w-4xl mx-auto fade-in">
-          <PlatformStats />
-        </div>
-      </div>
-    </section>
-    
-    <!-- Features Section -->
-    <section class="py-16 bg-white dark:bg-dark-surface">
-      <div class="container mx-auto">
-        <h2 class="text-3xl font-bold text-center mb-12 dark:text-dark-text">Why Use LN2UPI?</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-dark-bg dark:to-dark-surface p-6 rounded-lg shadow-card dark:shadow-card-dark border border-gray-200 dark:border-dark-border">
-            <div class="w-12 h-12 bg-lightning-blue/10 rounded-full flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-lightning-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+    <section class="section bg-bg-dark">
+      <div class="container px-6 py-16 mx-auto">
+        <div class="flex flex-col md:flex-row items-center">
+          <div class="md:w-1/2 lg:pr-12 mb-10 md:mb-0">
+            <h1 class="font-display text-4xl md:text-5xl font-bold text-text-light mb-6 leading-tight">
+              <span class="text-primary">Bitcoin Lightning</span> to 
+              <span class="text-secondary">UPI</span> Exchange
+            </h1>
+            <p class="text-text-muted text-lg mb-8 max-w-xl">
+              Instantly exchange Bitcoin over Lightning Network to Indian UPI accounts. No registration, no KYC, just pure peer-to-peer transactions.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+              <button @click="navigateTo('/send')" class="btn-primary">
+                Send to UPI
+              </button>
+              <button @click="navigateTo('/receive')" class="btn-secondary">
+                Receive Sats
+              </button>
             </div>
-            <h3 class="text-xl font-semibold mb-3 dark:text-dark-text">No Accounts</h3>
-            <p class="text-gray-600 dark:text-dark-text-secondary">No signups, no logins, no KYC. Just direct payments between Lightning Network and UPI.</p>
           </div>
           
-          <div class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-dark-bg dark:to-dark-surface p-6 rounded-lg shadow-card dark:shadow-card-dark border border-gray-200 dark:border-dark-border">
-            <div class="w-12 h-12 bg-lightning-blue/10 rounded-full flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-lightning-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+          <div class="md:w-1/2 flex justify-center">
+            <div class="card p-8 w-full max-w-lg">
+              <h2 class="font-display text-2xl font-medium text-text-light mb-6">Current Exchange Rate</h2>
+              
+              <div class="bg-bg-input p-4 rounded-lg border border-border-dark mb-6">
+                <div class="flex justify-between items-center">
+                  <span class="text-text-muted">1 BTC</span>
+                  <span>=</span>
+                  <div class="font-display text-xl font-medium">
+                    <div v-if="isLoading" class="animate-pulse bg-border-dark h-6 w-32 rounded"></div>
+                    <AnimatedRateCounter v-else :value="currentRate" prefix="₹ " :decimals="2" />
+                  </div>
+                </div>
+              </div>
+              
+              <div class="text-text-muted text-sm">
+                Rate updates in real-time. A small fee is applied to each transaction to support the service.
+              </div>
             </div>
-            <h3 class="text-xl font-semibold mb-3 dark:text-dark-text">Ultra Fast</h3>
-            <p class="text-gray-600 dark:text-dark-text-secondary">Lightning Network's instant settlements with India's fastest payment system, UPI.</p>
-          </div>
-          
-          <div class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-dark-bg dark:to-dark-surface p-6 rounded-lg shadow-card dark:shadow-card-dark border border-gray-200 dark:border-dark-border">
-            <div class="w-12 h-12 bg-lightning-blue/10 rounded-full flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-lightning-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold mb-3 dark:text-dark-text">From Plebs, For Plebs</h3>
-            <p class="text-gray-600 dark:text-dark-text-secondary">Built by Bitcoin plebs for the community. Simple tool that just works, with no extra fluff.</p>
           </div>
         </div>
-        
-        <IndianContextTip class="max-w-3xl mx-auto mt-12" />
       </div>
     </section>
     
     <!-- How It Works Section -->
-    <section class="py-16 bg-gray-50 dark:bg-dark-bg">
-      <div class="container mx-auto">
-        <h2 class="text-3xl font-bold text-center mb-4 dark:text-dark-text">How It Works</h2>
-        <p class="text-center text-gray-600 dark:text-dark-text-secondary max-w-2xl mx-auto mb-12">Simple, direct payments between Lightning Network and UPI in just a few steps</p>
+    <section class="section bg-bg-card">
+      <div class="container py-16">
+        <div class="text-center mb-12">
+          <h2 class="font-display text-3xl font-medium text-text-light mb-4">How It Works</h2>
+          <p class="text-text-muted max-w-2xl mx-auto">Simple, fast, and secure way to exchange Bitcoin to UPI and back</p>
+        </div>
         
-        <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <!-- Send to UPI Flow -->
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark overflow-hidden border border-gray-200 dark:border-dark-border">
-            <div class="lightning-gradient text-white p-4">
-              <h3 class="text-xl font-bold flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Send to UPI
-              </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <!-- Send to UPI -->
+          <div class="card hover:shadow-md transition-all duration-300 hover:border-primary/30">
+            <div class="text-primary mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
             </div>
-            <div class="p-6">
-              <ol class="space-y-4">
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-lightning-blue/10 text-lightning-blue flex items-center justify-center font-bold mr-3">1</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Enter INR amount</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">Specify how much INR you want to send</p>
-                  </div>
-                </li>
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-lightning-blue/10 text-lightning-blue flex items-center justify-center font-bold mr-3">2</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Enter UPI ID</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">Provide the recipient's UPI address</p>
-                  </div>
-                </li>
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-lightning-blue/10 text-lightning-blue flex items-center justify-center font-bold mr-3">3</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Pay Lightning Invoice</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">Pay with your Lightning wallet</p>
-                  </div>
-                </li>
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-lightning-blue/10 text-lightning-blue flex items-center justify-center font-bold mr-3">4</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Done!</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">UPI payment is sent automatically</p>
-                  </div>
-                </li>
-              </ol>
-              <NuxtLink to="/send" class="mt-6 block text-center bg-lightning-blue/10 hover:bg-lightning-blue/20 text-lightning-blue px-4 py-2 rounded-md font-medium transition-colors transform hover:scale-105 hover:shadow-md">
-                Send to UPI Now
-              </NuxtLink>
+            <h3 class="font-display text-xl font-medium text-text-light mb-3">Send to UPI</h3>
+            <div class="flex flex-col text-text-muted space-y-3 mb-4">
+              <p class="flex items-start">
+                <span class="text-primary font-medium mr-2">1.</span>
+                Enter INR amount and upload UPI QR
+              </p>
+              <p class="flex items-start">
+                <span class="text-primary font-medium mr-2">2.</span>
+                Wait for someone to process your payment
+              </p>
+              <p class="flex items-start">
+                <span class="text-primary font-medium mr-2">3.</span>
+                Confirm receipt and your sats are sent
+              </p>
             </div>
+            <button @click="navigateTo('/send')" class="btn-outline-primary mt-2 w-full">Start Now</button>
           </div>
           
-          <!-- Receive Sats Flow -->
-          <div class="bg-white dark:bg-dark-surface rounded-lg shadow-card dark:shadow-card-dark overflow-hidden border border-gray-200 dark:border-dark-border">
-            <div class="bg-upi-green text-white p-4">
-              <h3 class="text-xl font-bold flex items-center">
-                <UpiLogo :width="50" :height="18" class="mr-2" />
-                Receive Sats
-              </h3>
+          <!-- Receive Sats -->
+          <div class="card hover:shadow-md transition-all duration-300 hover:border-secondary/30">
+            <div class="text-secondary mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
             </div>
-            <div class="p-6">
-              <ol class="space-y-4">
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-upi-green/10 text-upi-green flex items-center justify-center font-bold mr-3">1</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Check available orders</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">Browse incoming payment requests</p>
-                  </div>
-                </li>
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-upi-green/10 text-upi-green flex items-center justify-center font-bold mr-3">2</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Accept a payment</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">Choose which payment to process</p>
-                  </div>
-                </li>
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-upi-green/10 text-upi-green flex items-center justify-center font-bold mr-3">3</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Confirm UPI receipt</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">Verify the payment reached your UPI</p>
-                  </div>
-                </li>
-                <li class="flex">
-                  <span class="flex-shrink-0 w-8 h-8 rounded-full bg-upi-green/10 text-upi-green flex items-center justify-center font-bold mr-3">4</span>
-                  <div>
-                    <p class="font-medium dark:text-dark-text">Get Paid in Sats</p>
-                    <p class="text-sm text-gray-600 dark:text-dark-text-secondary">Receive Lightning Network payment</p>
-                  </div>
-                </li>
-              </ol>
-              <NuxtLink to="/receive" class="mt-6 block text-center bg-upi-green/10 hover:bg-upi-green/20 text-upi-green px-4 py-2 rounded-md font-medium transition-colors transform hover:scale-105 hover:shadow-md">
-                Start Receiving Sats
-              </NuxtLink>
+            <h3 class="font-display text-xl font-medium text-text-light mb-3">Receive Sats</h3>
+            <div class="flex flex-col text-text-muted space-y-3 mb-4">
+              <p class="flex items-start">
+                <span class="text-secondary font-medium mr-2">1.</span>
+                Browse available orders in real-time
+              </p>
+              <p class="flex items-start">
+                <span class="text-secondary font-medium mr-2">2.</span>
+                Make UPI payment and upload receipt
+              </p>
+              <p class="flex items-start">
+                <span class="text-secondary font-medium mr-2">3.</span>
+                Get sats to your Lightning wallet
+              </p>
+            </div>
+            <button @click="navigateTo('/receive')" class="btn-outline-secondary mt-2 w-full">Start Now</button>
+          </div>
+          
+          <!-- Why Choose Us -->
+          <div class="card hover:shadow-md transition-all duration-300">
+            <div class="text-info mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 class="font-display text-xl font-medium text-text-light mb-3">Why Choose Us</h3>
+            <div class="flex flex-col text-text-muted space-y-3 mb-4">
+              <p class="flex items-start">
+                <span class="text-info font-medium mr-2">•</span>
+                No accounts or KYC required
+              </p>
+              <p class="flex items-start">
+                <span class="text-info font-medium mr-2">•</span>
+                Real-time Bitcoin exchange rates
+              </p>
+              <p class="flex items-start">
+                <span class="text-info font-medium mr-2">•</span>
+                Lightning-fast transactions
+              </p>
+              <p class="flex items-start">
+                <span class="text-info font-medium mr-2">•</span>
+                No data storage, complete privacy
+              </p>
             </div>
           </div>
         </div>
       </div>
     </section>
     
-    <!-- UPI Apps Section -->
-    <section class="py-16 bg-white dark:bg-dark-surface border-t border-b border-gray-200 dark:border-dark-border">
-      <div class="container mx-auto text-center">
-        <h2 class="text-3xl font-bold mb-6 dark:text-dark-text">Works With All UPI Apps</h2>
-        <p class="text-xl text-gray-600 dark:text-dark-text-secondary max-w-3xl mx-auto mb-8">
-          LN2UPI connects Lightning Network directly with India's UPI ecosystem.
-        </p>
-        <div class="flex flex-wrap justify-center gap-8 mb-10">
-          <UpiLogo :width="100" :height="30" class="h-8 object-contain my-1" />
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/1200px-Google_Pay_Logo.svg.png" alt="Google Pay" class="h-8 object-contain" />
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/1200px-Paytm_Logo_%28standalone%29.svg.png" alt="Paytm" class="h-8 object-contain" />
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/PhonePe_Logo.svg/1200px-PhonePe_Logo.svg.png" alt="PhonePe" class="h-8 object-contain" />
-          <BhimLogo :width="80" :height="24" class="h-8 object-contain my-1" />
+    <!-- FAQ Section -->
+    <section class="section bg-bg-dark">
+      <div class="container py-16">
+        <div class="text-center mb-12">
+          <h2 class="font-display text-3xl font-medium text-text-light mb-4">Frequently Asked Questions</h2>
+          <p class="text-text-muted max-w-2xl mx-auto">Everything you need to know about LN2UPI</p>
         </div>
-        <NuxtLink to="/send" class="btn-glow inline-flex items-center bg-lightning-blue hover:bg-lightning-blue/90 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-          <span class="relative z-10">Get Started Now</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </NuxtLink>
+        
+        <div class="max-w-3xl mx-auto">
+          <div class="space-y-6">
+            <div class="card hover:border-primary/30 transition-all">
+              <h3 class="font-display text-xl font-medium text-text-light mb-2">How secure is LN2UPI?</h3>
+              <p class="text-text-muted">
+                All transactions are peer-to-peer with no middleman. We don't store your data or payment details. 
+                Lightning Network's payment protocol ensures your bitcoin is secure throughout the process.
+              </p>
+            </div>
+            
+            <div class="card hover:border-primary/30 transition-all">
+              <h3 class="font-display text-xl font-medium text-text-light mb-2">Are there any fees?</h3>
+              <p class="text-text-muted">
+                Yes, a small fee is applied to each transaction to maintain the service and incentivize liquidity providers. 
+                The exact fee is shown upfront before you confirm any transaction.
+              </p>
+            </div>
+            
+            <div class="card hover:border-primary/30 transition-all">
+              <h3 class="font-display text-xl font-medium text-text-light mb-2">How fast are the transactions?</h3>
+              <p class="text-text-muted">
+                Lightning Network transactions are near-instant. The overall process depends on how quickly 
+                someone processes your UPI payment, but most transactions complete within minutes.
+              </p>
+            </div>
+            
+            <div class="card hover:border-primary/30 transition-all">
+              <h3 class="font-display text-xl font-medium text-text-light mb-2">What if something goes wrong?</h3>
+              <p class="text-text-muted">
+                Our platform uses a verification system to ensure both parties confirm successful payments. 
+                If a problem occurs, the transaction will timeout and funds will be returned to the original sender.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- CTA Section -->
+    <section class="section bg-primary/10">
+      <div class="container py-16">
+        <div class="text-center max-w-3xl mx-auto">
+          <h2 class="font-display text-3xl font-medium text-text-light mb-6">Ready to Exchange?</h2>
+          <p class="text-text-muted mb-8">
+            Start using LN2UPI today and experience the fastest, simplest way to exchange Bitcoin and UPI.
+          </p>
+          
+          <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <button @click="navigateTo('/send')" class="btn-primary">
+              Send to UPI
+            </button>
+            <button @click="navigateTo('/receive')" class="btn-secondary">
+              Receive Sats
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   </div>

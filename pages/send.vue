@@ -1,299 +1,537 @@
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
-import { useNuxtApp } from '#app';
-import BitcoinLogo from '~/components/BitcoinLogo.vue';
-import UpiLogo from '~/components/UpiLogo.vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
+import QRCodeUploader from '~/components/QRCodeUploader.vue';
+import OrderCard from '~/components/OrderCard.vue';
 
-// Get exchange rate from server
-const { data: exchangeRate } = await useFetch('/api/exchange-rate');
-const exchangeRateData = exchangeRate.value?.rates || { BTC_INR: 5600000, SAT_INR: 0.056 };
+// State variables
+const step = ref(1); // 1: Form, 2: QR Upload, 3: Invoice, 4: Waiting, 5: Complete
+const inrAmount = ref(500);
+const satAmount = ref(0);
+const currentRate = ref(0);
+const upiData = ref(null);
+const orderId = ref(null);
+const orderStatus = ref('pending');
+const lightningInvoice = ref('');
+const exchangeFee = ref(0.02); // 2% default
+const isSubmitting = ref(false);
+const errorMessage = ref('');
+const qrProcessing = ref(false);
+const eventSource = ref(null);
 
-// Form state
-const step = ref(1);
-const form = reactive({
-  inrAmount: '',
-  upiQrCode: null,
-  upiDetails: null,
-  orderDetails: null,
-  orderId: null
+// Service fee calculation
+const serviceFee = computed(() => {
+  return Math.ceil(inrAmount.value * exchangeFee.value);
 });
 
-// Validation
-const isAmountValid = computed(() => {
-  const amount = parseFloat(form.inrAmount);
-  return !isNaN(amount) && amount >= 500 && amount <= 50000;
+// Total amount with fees
+const totalInr = computed(() => {
+  return inrAmount.value - serviceFee.value;
 });
 
-// Calculated values
-const satAmount = computed(() => {
-  if (!form.inrAmount) return 0;
-  return Math.round(parseFloat(form.inrAmount) / exchangeRateData.SAT_INR);
-});
-
-const fees = computed(() => {
-  return Math.round(satAmount.value * 0.03); // 3% total fee
-});
-
+// Total amount in sats
 const totalSats = computed(() => {
-  return satAmount.value + fees.value;
+  if (!currentRate.value) return 0;
+  // Convert INR to BTC, then to sats (100 million sats per BTC)
+  return Math.floor((totalInr.value / currentRate.value) * 100000000);
 });
 
-// Actions
-function submitAmount() {
-  if (isAmountValid.value) {
+// Check if form is valid
+const isFormValid = computed(() => {
+  return inrAmount.value >= 100 && inrAmount.value <= 10000;
+});
+
+// Get current BTC to INR exchange rate
+async function fetchExchangeRate() {
+  try {
+    const response = await fetch('/api/exchange-rate');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch exchange rate');
+    }
+    
+    const data = await response.json();
+    currentRate.value = data.rate;
+  } catch (error) {
+    console.error('Error fetching exchange rate:', error);
+    errorMessage.value = 'Failed to fetch current exchange rate. Please try again.';
+  }
+}
+
+// Set up SSE for real-time rate updates
+function setupRateUpdates() {
+  if (process.client) {
+    try {
+      const es = new EventSource('/api/sse/exchange-rate');
+      
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.rate) {
+            currentRate.value = data.rate;
+          }
+        } catch (e) {
+          console.error('Error parsing SSE message:', e);
+        }
+      };
+      
+      es.onerror = (error) => {
+        console.error('SSE connection error:', error);
+      };
+      
+      eventSource.value = es;
+    } catch (error) {
+      console.error('Failed to initialize SSE:', error);
+    }
+  }
+}
+
+// QR code upload handling
+function handleQRUpload(result) {
+  qrProcessing.value = false;
+  
+  if (result && result.upiId) {
+    upiData.value = result;
+    step.value = 3; // Move to invoice step
+    createOrder();
+  } else {
+    errorMessage.value = 'Failed to extract UPI information from QR code';
+  }
+}
+
+function handleQRError(error) {
+  qrProcessing.value = false;
+  errorMessage.value = error.message || 'Failed to process QR code';
+}
+
+function handleProcessingStart() {
+  qrProcessing.value = true;
+}
+
+function handleProcessingEnd() {
+  qrProcessing.value = false;
+}
+
+// Create order in backend
+async function createOrder() {
+  if (!upiData.value || !isFormValid.value) {
+    errorMessage.value = 'Please complete all required information first';
+    return;
+  }
+  
+  isSubmitting.value = true;
+  errorMessage.value = '';
+  
+  try {
+    const response = await fetch('/api/create-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        inrAmount: inrAmount.value,
+        satAmount: totalSats.value,
+        upiId: upiData.value.upiId,
+        upiName: upiData.value.name || '',
+        orderType: 'buy'
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create order');
+    }
+    
+    const data = await response.json();
+    
+    if (data.id && data.invoice) {
+      orderId.value = data.id;
+      lightningInvoice.value = data.invoice;
+      step.value = 3; // Move to invoice step
+      
+      // Start listening for order updates
+      setupOrderUpdates(data.id);
+    } else {
+      throw new Error('Invalid response from server');
+    }
+  } catch (error) {
+    errorMessage.value = error.message || 'Failed to create order';
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+// Set up SSE for order status updates
+function setupOrderUpdates(id) {
+  if (process.client && id) {
+    try {
+      // Close existing SSE connection if any
+      if (eventSource.value && eventSource.value !== null) {
+        eventSource.value.close();
+      }
+      
+      const es = new EventSource(`/api/sse/order/${id}`);
+      
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.status) {
+            orderStatus.value = data.status;
+            
+            if (data.status === 'completed') {
+              step.value = 5; // Move to complete step
+            } else if (data.status === 'processing') {
+              step.value = 4; // Move to waiting for confirmation step
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing order update:', e);
+        }
+      };
+      
+      es.onerror = (error) => {
+        console.error('Order update SSE error:', error);
+      };
+      
+      eventSource.value = es;
+    } catch (error) {
+      console.error('Failed to initialize order updates:', error);
+    }
+  }
+}
+
+// Go to next step in the form
+function nextStep() {
+  if (step.value === 1 && isFormValid.value) {
     step.value = 2;
   }
 }
 
-async function uploadQrCode(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    form.upiQrCode = e.target.result;
-    
-    try {
-      // Actually process the QR code
-      const { data } = await useFetch('/api/process-qr', {
-        method: 'POST',
-        body: { imageData: form.upiQrCode }
-      });
-      
-      if (data.value && data.value.upiId) {
-        form.upiDetails = data.value;
-      } else {
-        form.upiDetails = {
-          upiId: 'user@okaxis',
-          name: 'UPI User',
-          merchantCode: Math.random().toString(36).substring(2, 8).toUpperCase()
-        };
-      }
-      
-      step.value = 3;
-    } catch (error) {
-      console.error('Error processing QR code:', error);
-      form.upiDetails = {
-        upiId: 'user@okaxis',
-        name: 'UPI User',
-        merchantCode: Math.random().toString(36).substring(2, 8).toUpperCase()
-      };
-      step.value = 3;
-    }
-  };
-  reader.readAsDataURL(file);
-}
-
-async function createOrder() {
-  try {
-    // Create real order
-    const { data, error } = await useFetch('/api/create-order', {
-      method: 'POST',
-      body: {
-        amount: parseFloat(form.inrAmount),
-        upiId: form.upiDetails.upiId,
-        satAmount: satAmount.value,
-        serviceFee: fees.value
-      }
-    });
-    
-    if (error.value) {
-      throw new Error(error.value.message || 'Failed to create order');
-    }
-    
-    if (data.value && data.value.orderId) {
-      form.orderId = data.value.orderId;
-      form.orderDetails = data.value;
-    } else {
-      // Fallback if API fails
-      form.orderId = 'ORD-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-    }
-    
-    // Connect to socket for real-time updates on this order
-    const { $socket } = useNuxtApp();
-    if ($socket && $socket.connected) {
-      $socket.emit('join-order', { orderId: form.orderId });
-    }
-    
-    step.value = 4;
-  } catch (error) {
-    console.error('Error creating order:', error);
-    // Fallback
-    form.orderId = 'ORD-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-    step.value = 4;
+// Go back to previous step
+function prevStep() {
+  if (step.value > 1) {
+    step.value--;
   }
 }
+
+// Reset the whole form
+function resetForm() {
+  step.value = 1;
+  inrAmount.value = 500;
+  upiData.value = null;
+  orderId.value = null;
+  orderStatus.value = 'pending';
+  lightningInvoice.value = '';
+  errorMessage.value = '';
+  
+  // Close SSE connection
+  if (eventSource.value && eventSource.value !== null) {
+    eventSource.value.close();
+    eventSource.value = null;
+  }
+  
+  // Setup rate updates again
+  setupRateUpdates();
+}
+
+// Copy lightning invoice to clipboard
+function copyInvoice() {
+  if (lightningInvoice.value) {
+    navigator.clipboard.writeText(lightningInvoice.value)
+      .then(() => {
+        // You can add a toast notification here
+        console.log('Invoice copied to clipboard');
+      })
+      .catch(err => {
+        console.error('Could not copy text: ', err);
+      });
+  }
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  fetchExchangeRate();
+  setupRateUpdates();
+});
+
+onUnmounted(() => {
+  // Clean up SSE connections
+  if (eventSource.value && eventSource.value !== null) {
+    eventSource.value.close();
+  }
+});
 </script>
 
 <template>
-  <div class="container py-8 md:py-12">
-    <h1 class="text-3xl font-bold text-center mb-8">Buy Bitcoin with UPI</h1>
-    
-    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-card p-6">
-      <!-- Step indicators -->
-      <div class="flex justify-between mb-8">
-        <div v-for="i in 4" :key="i" class="flex flex-col items-center">
-          <div :class="`rounded-full h-10 w-10 flex items-center justify-center ${step >= i ? 'bg-bitcoin-orange text-white' : 'bg-gray-200'}`">{{ i }}</div>
-          <div class="text-sm mt-2">
-            <template v-if="i === 1">Amount</template>
-            <template v-else-if="i === 2">UPI Details</template>
-            <template v-else-if="i === 3">Confirm</template>
-            <template v-else-if="i === 4">Wait</template>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Step 1: Enter INR amount -->
-      <div v-if="step === 1">
-        <h2 class="text-xl font-semibold mb-4">Enter Amount in INR</h2>
-        <p class="text-gray-600 mb-4">
-          Specify the amount of INR you want to exchange for Bitcoin.
-        </p>
+  <div class="container py-12 px-6">
+    <div class="max-w-4xl mx-auto">
+      <!-- Steps indicator -->
+      <div class="flex justify-between mb-12 relative">
+        <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-border-dark -translate-y-1/2 z-0"></div>
         
-        <form @submit.prevent="submitAmount" class="space-y-4">
-          <div>
-            <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
-            <div class="relative rounded-md shadow-sm">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span class="text-gray-500 sm:text-sm">₹</span>
-              </div>
-              <input
-                type="number"
-                id="amount"
-                v-model="form.inrAmount"
-                min="500"
-                max="50000"
-                placeholder="1000"
-                class="focus:ring-bitcoin-orange focus:border-bitcoin-orange block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md py-2 border"
-              />
-              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <span class="text-gray-500 sm:text-sm">INR</span>
-              </div>
-            </div>
-            <p class="mt-1 text-xs text-gray-500">Min: ₹500 | Max: ₹50,000</p>
-          </div>
-          
-          <div>
-            <button 
-              type="submit" 
-              class="w-full bg-bitcoin-orange hover:bg-bitcoin-orange/90 text-white py-2 px-4 rounded-md transition-colors"
-              :disabled="!isAmountValid"
-              :class="{ 'opacity-50 cursor-not-allowed': !isAmountValid }"
+        <template v-for="(s, index) in ['Amount', 'QR Code', 'Invoice', 'Waiting', 'Complete']" :key="index">
+          <div class="flex flex-col items-center relative z-10">
+            <div 
+              class="h-8 w-8 rounded-full flex items-center justify-center text-sm mb-2 transition-all"
+              :class="step > index + 1 
+                ? 'bg-primary text-white' 
+                : step === index + 1 
+                  ? 'bg-primary text-white animate-pulse'
+                  : 'bg-bg-input text-text-muted'"
             >
-              Continue
-            </button>
+              <span v-if="step > index + 1">✓</span>
+              <span v-else>{{ index + 1 }}</span>
+            </div>
+            <span 
+              class="text-xs transition-all"
+              :class="step >= index + 1 ? 'text-text-light' : 'text-text-muted'"
+            >
+              {{ s }}
+            </span>
           </div>
-        </form>
-        
-        <div class="mt-4 text-sm text-gray-600">
-          <p>You will be able to upload your UPI QR code in the next step.</p>
-        </div>
+        </template>
       </div>
       
-      <!-- Step 2: Upload UPI QR code -->
-      <div v-if="step === 2">
-        <h2 class="text-xl font-semibold mb-4">Upload UPI QR Code</h2>
-        <p class="mb-4">Amount: ₹{{ form.inrAmount }}</p>
+      <!-- Error message -->
+      <div v-if="errorMessage" class="mb-8 p-4 bg-error/10 border border-error rounded-lg">
+        <p class="text-error">{{ errorMessage }}</p>
+      </div>
+      
+      <!-- Step 1: Amount Form -->
+      <div v-if="step === 1" class="card mb-8">
+        <h2 class="font-display text-2xl font-medium text-text-light mb-6">Enter Amount</h2>
         
-        <div 
-          class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-bitcoin-orange transition-colors"
-          @click="$refs.fileInput.click()"
-        >
-          <input 
-            type="file" 
-            ref="fileInput"
-            @change="uploadQrCode"
-            accept="image/*"
-            class="hidden"
-          />
-          
-          <div v-if="!form.upiQrCode">
-            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p class="mt-2 text-sm text-gray-600">Click to upload or drag and drop</p>
-            <p class="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+        <div class="mb-6">
+          <label for="amount" class="block mb-2 text-text-light font-medium">INR Amount</label>
+          <div class="relative">
+            <span class="absolute top-1/2 left-4 transform -translate-y-1/2 text-text-muted">₹</span>
+            <input 
+              id="amount"
+              v-model.number="inrAmount"
+              type="number"
+              min="100"
+              max="10000"
+              class="input pl-8"
+              placeholder="Enter amount in INR"
+            />
           </div>
+          <p class="text-text-muted text-sm mt-2">Minimum: ₹100, Maximum: ₹10,000</p>
+        </div>
+        
+        <div class="bg-bg-input p-4 rounded-lg border border-border-dark mb-6">
+          <h3 class="font-medium text-text-light mb-2">Exchange Summary</h3>
           
-          <div v-else-if="!form.upiDetails" class="text-center py-4">
-            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-bitcoin-orange mx-auto"></div>
-            <p class="mt-2 text-sm text-gray-600">Processing QR Code...</p>
-          </div>
-          
-          <div v-else class="relative">
-            <img :src="form.upiQrCode" class="max-h-48 mx-auto rounded" />
-            <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded opacity-0 hover:opacity-100 transition-opacity">
-              <p class="text-white text-sm">Click to change</p>
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-text-muted">Amount</span>
+              <span class="text-text-light">₹ {{ inrAmount }}</span>
+            </div>
+            
+            <div class="flex justify-between items-center">
+              <span class="text-text-muted">Service Fee ({{ exchangeFee * 100 }}%)</span>
+              <span class="text-text-light">₹ {{ serviceFee }}</span>
+            </div>
+            
+            <div class="border-t border-border-dark my-2 pt-2">
+              <div class="flex justify-between items-center font-medium">
+                <span class="text-text-muted">Total to Send (UPI)</span>
+                <span class="text-text-light">₹ {{ totalInr }}</span>
+              </div>
+            </div>
+            
+            <div class="flex justify-between items-center mt-4">
+              <span class="text-text-muted">You Receive</span>
+              <span class="text-primary font-medium">{{ totalSats.toLocaleString() }} sats</span>
+            </div>
+            
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-text-muted">Current Rate</span>
+              <span class="text-text-muted">
+                <AnimatedRateCounter :value="currentRate" prefix="₹ " :decimals="2" />
+                <span class="ml-1">per BTC</span>
+              </span>
             </div>
           </div>
         </div>
         
-        <button @click="step = 1" class="mt-4 text-bitcoin-orange hover:underline">Go Back</button>
-      </div>
-      
-      <!-- Step 3: Confirm order details -->
-      <div v-if="step === 3">
-        <h2 class="text-xl font-semibold mb-4">Confirm Order Details</h2>
-        <div class="bg-gray-50 p-4 rounded mb-4">
-          <div class="grid grid-cols-2 gap-2">
-            <div class="text-gray-600">INR Amount:</div>
-            <div class="font-medium">₹{{ form.inrAmount }}</div>
-            
-            <div class="text-gray-600">UPI ID:</div>
-            <div class="font-medium">{{ form.upiDetails?.upiId }}</div>
-            
-            <div class="text-gray-600">Bitcoin Amount:</div>
-            <div class="font-medium">{{ satAmount }} sats</div>
-            
-            <div class="text-gray-600">Service Fee:</div>
-            <div class="font-medium">{{ fees }} sats</div>
-            
-            <div class="text-gray-600 font-semibold">Total to Pay:</div>
-            <div class="font-semibold">{{ totalSats }} sats</div>
-          </div>
-        </div>
-        
-        <div class="flex justify-between">
-          <button @click="step = 2" class="text-bitcoin-orange hover:underline">Go Back</button>
-          <button @click="createOrder" class="bg-bitcoin-orange hover:bg-bitcoin-orange/90 text-white px-6 py-2 rounded-lg">
-            Create Order
+        <div class="flex justify-end">
+          <button 
+            @click="nextStep"
+            :disabled="!isFormValid"
+            class="btn-primary"
+            :class="{'opacity-50 cursor-not-allowed': !isFormValid}"
+          >
+            Next
           </button>
         </div>
       </div>
       
-      <!-- Step 4: Waiting for payment -->
-      <div v-if="step === 4">
-        <h2 class="text-xl font-semibold mb-4">Waiting for Payment</h2>
-        <div class="text-center mb-6 fade-in">
-          <div class="inline-block rounded-full bg-blue-100 p-3 mb-4 pulse-shadow">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-bitcoin-orange animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <!-- Step 2: QR Code Upload -->
+      <div v-else-if="step === 2" class="card mb-8">
+        <h2 class="font-display text-2xl font-medium text-text-light mb-6">Upload UPI QR Code</h2>
+        
+        <p class="text-text-muted mb-6">
+          Upload the QR code of the UPI account where you want to receive payment.
+        </p>
+        
+        <QRCodeUploader 
+          @upload-success="handleQRUpload"
+          @upload-error="handleQRError"
+          @processing-start="handleProcessingStart"
+          @processing-end="handleProcessingEnd"
+        />
+        
+        <div class="flex justify-between mt-8">
+          <button 
+            @click="prevStep"
+            class="btn-outline-primary"
+            :disabled="qrProcessing"
+          >
+            Back
+          </button>
+          
+          <button 
+            v-if="false" 
+            @click="nextStep"
+            :disabled="!upiData || qrProcessing"
+            class="btn-primary"
+            :class="{'opacity-50 cursor-not-allowed': !upiData || qrProcessing}"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 3: Lightning Invoice -->
+      <div v-else-if="step === 3" class="card mb-8">
+        <h2 class="font-display text-2xl font-medium text-text-light mb-6">Pay Lightning Invoice</h2>
+        
+        <p class="text-text-muted mb-6">
+          Pay the Lightning invoice below to start your transaction. Once payment is detected, 
+          your order will be available for someone to process.
+        </p>
+        
+        <div class="bg-bg-input p-4 rounded-lg border border-border-dark mb-6">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-medium text-text-light">Invoice</h3>
+            
+            <button 
+              @click="copyInvoice"
+              class="px-2 py-1 text-xs rounded bg-bg-dark text-text-muted hover:text-primary transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto font-mono text-xs text-text-muted bg-bg-dark p-3 rounded break-all">
+            {{ lightningInvoice || 'Generating invoice...' }}
+          </div>
+        </div>
+        
+        <div class="bg-info/10 border border-info/30 rounded-lg p-4 text-text-light mb-6">
+          <h3 class="font-medium mb-2">What happens next?</h3>
+          <ol class="list-decimal pl-5 space-y-2 text-text-muted">
+            <li>After payment, your order enters the marketplace</li>
+            <li>You'll be automatically notified when someone processes your payment</li>
+            <li>Confirm receipt of UPI payment to complete the transaction</li>
+          </ol>
+        </div>
+        
+        <div class="flex justify-between">
+          <button 
+            @click="prevStep"
+            class="btn-outline-primary"
+            :disabled="isSubmitting"
+          >
+            Back
+          </button>
+          
+          <button 
+            v-if="false"
+            @click="nextStep" 
+            :disabled="!lightningInvoice || isSubmitting"
+            class="btn-primary"
+            :class="{'opacity-50 cursor-not-allowed': !lightningInvoice || isSubmitting}"
+          >
+            I've Paid the Invoice
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 4: Waiting for UPI Payment -->
+      <div v-else-if="step === 4" class="card mb-8">
+        <h2 class="font-display text-2xl font-medium text-text-light mb-6">Waiting for UPI Payment</h2>
+        
+        <div class="bg-warning/10 border border-warning/30 rounded-lg p-4 text-text-light mb-6">
+          <h3 class="font-medium mb-2">Order in Progress</h3>
+          <p class="text-text-muted">
+            Someone is processing your order right now. They will make the UPI payment
+            and upload proof of payment shortly. Please be patient.
+          </p>
+        </div>
+        
+        <div v-if="orderId" class="mb-6">
+          <OrderCard 
+            :order="{
+              id: orderId,
+              inrAmount: totalInr,
+              satAmount: totalSats,
+              upiId: upiData?.upiId || '',
+              expiresAt: null
+            }"
+            type="buy"
+            :status="orderStatus"
+          />
+        </div>
+        
+        <div class="flex justify-center">
+          <button 
+            class="btn-outline-primary"
+            @click="resetForm"
+          >
+            Create New Order
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 5: Transaction Complete -->
+      <div v-else-if="step === 5" class="card mb-8">
+        <div class="text-center">
+          <div class="text-success mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p class="text-lg">Your order <span class="font-semibold lightning-text">{{ form.orderId }}</span> has been created!</p>
-          <p class="text-gray-600 mt-2">Waiting for someone to process your UPI payment...</p>
           
-          <div class="mt-6 p-4 bg-gradient-to-r from-lightning-blue/5 to-lightning-purple/5 border border-lightning-blue/10 rounded-lg shadow-inner">
-            <div class="flex items-center justify-center space-x-2">
-              <div class="h-2 w-2 bg-lightning-blue rounded-full animate-ping"></div>
-              <div class="text-lightning-blue">Looking for earners</div>
-              <div class="h-2 w-2 bg-lightning-blue rounded-full animate-ping" style="animation-delay: 0.3s"></div>
+          <h2 class="font-display text-2xl font-medium text-text-light mb-4">Transaction Complete!</h2>
+          
+          <p class="text-text-muted mb-8">
+            Your order has been successfully completed. The payment of {{ totalInr }} INR has been sent to your UPI account.
+          </p>
+          
+          <div class="bg-success/10 border border-success/30 rounded-lg p-4 text-text-light mb-8 mx-auto max-w-md">
+            <h3 class="font-medium mb-2">Transaction Summary</h3>
+            <div class="text-left">
+              <div class="flex justify-between py-2 border-b border-border-dark">
+                <span class="text-text-muted">Order ID</span>
+                <span class="text-text-light font-mono">{{ orderId?.substring(0, 8) }}</span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-border-dark">
+                <span class="text-text-muted">Amount Received</span>
+                <span class="text-text-light">₹ {{ totalInr }}</span>
+              </div>
+              <div class="flex justify-between py-2">
+                <span class="text-text-muted">Sats Sent</span>
+                <span class="text-primary">{{ totalSats.toLocaleString() }} sats</span>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-lg shadow-md">
-          <div class="flex items-start">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p class="text-sm text-yellow-800">Do not close this window. Once your payment is processed, you will be prompted to confirm receipt and release the Bitcoin payment.</p>
-          </div>
-        </div>
-        
-        <div class="mt-6 text-center">
-          <button @click="$socket?.emit('find-earner', { orderId: form.orderId })" class="bg-lightning-blue/10 hover:bg-lightning-blue/20 text-lightning-blue px-4 py-2 rounded-md font-medium transition-all transform hover:scale-105">
-            Search for Earners
+          
+          <button 
+            @click="resetForm"
+            class="btn-primary"
+          >
+            Start New Transaction
           </button>
         </div>
       </div>
