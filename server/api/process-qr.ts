@@ -1,4 +1,6 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3';
+import Jimp from 'jimp';
+import jsQR from 'jsqr';
 
 /**
  * Parse UPI QR code data
@@ -8,6 +10,7 @@ function parseUpiData(data: string) {
   try {
     // Check if this is a UPI QR code
     if (!data.startsWith('upi://')) {
+      console.log('Not a UPI QR code:', data.substring(0, 30) + '...');
       return null;
     }
     
@@ -54,6 +57,47 @@ function parseUpiData(data: string) {
   }
 }
 
+/**
+ * Decode QR code from image
+ */
+async function decodeQRFromImage(base64Image: string) {
+  try {
+    // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
+    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    
+    // Load image with Jimp
+    const image = await Jimp.read(Buffer.from(base64Data, 'base64'));
+    
+    // Get image data for QR scanning
+    const { width, height } = image.bitmap;
+    const imageData = new Uint8ClampedArray(width * height * 4);
+    
+    let i = 0;
+    image.scan(0, 0, width, height, function(x, y, idx) {
+      imageData[i++] = this.bitmap.data[idx + 0]; // R
+      imageData[i++] = this.bitmap.data[idx + 1]; // G
+      imageData[i++] = this.bitmap.data[idx + 2]; // B
+      imageData[i++] = this.bitmap.data[idx + 3]; // A
+    });
+    
+    // Scan for QR code
+    const code = jsQR(imageData, width, height, {
+      inversionAttempts: "dontInvert",
+    });
+    
+    if (code) {
+      console.log('QR code found:', code.data);
+      return code.data;
+    } else {
+      console.error('No QR code found in image');
+      return null;
+    }
+  } catch (error) {
+    console.error('Error decoding QR code:', error);
+    return null;
+  }
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
@@ -65,34 +109,39 @@ export default defineEventHandler(async (event) => {
       });
     }
     
-    // In a real implementation, we would decode the QR code from the image
-    // using a library like jsQR. For this demo, we'll simulate QR decoding
-    // and pretend we extracted a UPI string from the QR code.
+    // Decode the QR code from the image
+    console.log('Decoding QR code from image...');
+    const qrData = await decodeQRFromImage(body.image);
     
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulate a decoded UPI QR code string
-    // In a real app, this would come from decoding the QR image
-    const simulatedQrData = 'upi://pay?pa=example@upi&pn=Example+User&mc=1234&tid=QR' + 
-                            Math.floor(Math.random() * 10000000) + 
-                            '&tr=REF' + Math.floor(Math.random() * 10000000);
-    
-    // Parse the UPI data
-    const upiData = parseUpiData(simulatedQrData);
-    
-    // Check if this is a valid UPI QR code
-    if (!upiData) {
+    if (!qrData) {
       throw createError({
         statusCode: 400,
-        message: 'Invalid QR code: Not a valid UPI QR code'
+        message: 'No QR code found in the image or unable to decode'
       });
     }
     
+    console.log('QR code decoded successfully:', qrData);
+    
+    // For UPI, parse the data if it's a UPI QR code
+    const upiData = parseUpiData(qrData);
+    
+    if (!upiData) {
+      // For non-UPI QR codes, return the raw data
+      return {
+        success: true,
+        rawData: qrData,
+        isUpi: false,
+        message: 'QR code decoded, but not a UPI QR code'
+      };
+    }
+    
+    // Return UPI data
     return {
       success: true,
       upiId: upiData.upiId,
       name: upiData.name,
+      amount: upiData.amount,
+      isUpi: true,
       meta: upiData
     };
   } catch (error) {

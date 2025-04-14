@@ -16,6 +16,7 @@ const isProcessing = ref(false);
 const errorMessage = ref('');
 const progress = ref(0);
 const dragActive = ref(false);
+const detectedUpiInfo = ref(null);
 
 const isValidFile = computed(() => {
   if (!selectedFile.value) return false;
@@ -84,6 +85,7 @@ function resetUpload() {
   previewUrl.value = '';
   errorMessage.value = '';
   progress.value = 0;
+  detectedUpiInfo.value = null;
 }
 
 async function processQRCode() {
@@ -131,13 +133,41 @@ async function processQRCode() {
           throw new Error(errorMsg);
         }
         
-        // Validate that it's a UPI QR code
-        if (!result.upiId || !result.meta || !result.meta.isValid) {
-          throw new Error('Invalid QR code: Not a valid UPI QR code');
+        progress.value = 100;
+        
+        // Check if it's a UPI QR code
+        if (!result.isUpi) {
+          console.warn('Non-UPI QR code detected:', result.rawData);
+          throw new Error(`Not a UPI QR code. Detected: ${result.rawData.substring(0, 30)}...`);
         }
         
-        progress.value = 100;
+        // Validate UPI data
+        if (!result.upiId) {
+          throw new Error('Invalid UPI QR: Missing UPI ID');
+        }
+        
         console.log('UPI QR code processed successfully:', result);
+        
+        // Store detected UPI info for UI display
+        detectedUpiInfo.value = {
+          upiId: result.upiId,
+          name: result.name || 'Not provided',
+          amount: result.amount,
+          transactionId: result.meta?.transactionId,
+          reference: result.meta?.reference,
+          rawData: result.meta?.rawData
+        };
+        
+        // Show details about the detected UPI data in console
+        const details = [
+          `UPI ID: ${result.upiId}`,
+          `Name: ${result.name || 'Not provided'}`,
+          result.amount ? `Amount: ₹${result.amount}` : null,
+          result.meta?.transactionId ? `Transaction ID: ${result.meta.transactionId}` : null,
+          result.meta?.reference ? `Reference: ${result.meta.reference}` : null
+        ].filter(Boolean).join('\n');
+        
+        console.log('UPI QR Details:\n' + details);
         
         emit('upload-success', result);
       } catch (error) {
@@ -234,6 +264,33 @@ function handleDrop(e) {
           class="bg-primary h-2.5 rounded-full transition-all duration-300"
           :style="`width: ${progress}%`"
         ></div>
+      </div>
+      
+      <!-- Detected UPI Info -->
+      <div v-if="detectedUpiInfo" class="mt-4 bg-success/10 p-4 rounded-lg border border-success/30">
+        <h4 class="font-medium text-text-light mb-2">UPI QR Code Detected</h4>
+        <ul class="space-y-1 text-sm text-text-muted">
+          <li class="flex justify-between">
+            <span class="font-medium">UPI ID:</span>
+            <span>{{ detectedUpiInfo.upiId }}</span>
+          </li>
+          <li class="flex justify-between">
+            <span class="font-medium">Payee:</span>
+            <span>{{ detectedUpiInfo.name }}</span>
+          </li>
+          <li v-if="detectedUpiInfo.amount" class="flex justify-between">
+            <span class="font-medium">Amount:</span>
+            <span>₹ {{ detectedUpiInfo.amount }}</span>
+          </li>
+          <li v-if="detectedUpiInfo.transactionId" class="flex justify-between">
+            <span class="font-medium">Transaction ID:</span>
+            <span>{{ detectedUpiInfo.transactionId }}</span>
+          </li>
+          <li v-if="detectedUpiInfo.reference" class="flex justify-between">
+            <span class="font-medium">Reference:</span>
+            <span>{{ detectedUpiInfo.reference }}</span>
+          </li>
+        </ul>
       </div>
     </div>
     
