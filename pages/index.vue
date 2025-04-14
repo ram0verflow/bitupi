@@ -1,11 +1,13 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
 
 const router = useRouter();
 const currentRate = ref(0);
 const isLoading = ref(true);
+const randomInsight = ref(null);
+const insightLoading = ref(false);
 
 // Function to navigate to send or receive pages
 function navigateTo(path) {
@@ -28,6 +30,50 @@ async function fetchExchangeRate() {
     console.error('Error fetching exchange rate:', error);
   } finally {
     isLoading.value = false;
+  }
+}
+
+// Fetch a random philosophical insight
+async function fetchRandomInsight() {
+  try {
+    insightLoading.value = true;
+    const response = await fetch('/api/random-insight');
+    
+    if (!response.ok) {
+      console.error('Failed to fetch insight');
+      return;
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      randomInsight.value = {
+        heading: data.heading,
+        insight: data.insight
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching insight:', error);
+  } finally {
+    insightLoading.value = false;
+  }
+}
+
+// Rotate insights automatically
+let insightInterval;
+function startInsightRotation() {
+  // First fetch immediately
+  fetchRandomInsight();
+  
+  // Then set up interval
+  insightInterval = setInterval(() => {
+    fetchRandomInsight();
+  }, 15000); // Rotate every 15 seconds
+}
+
+function stopInsightRotation() {
+  if (insightInterval) {
+    clearInterval(insightInterval);
   }
 }
 
@@ -60,6 +106,13 @@ function setupRateUpdates() {
 onMounted(() => {
   fetchExchangeRate();
   setupRateUpdates();
+  if (process.client) {
+    startInsightRotation();
+  }
+});
+
+onUnmounted(() => {
+  stopInsightRotation();
 });
 </script>
 
@@ -242,6 +295,33 @@ onMounted(() => {
                 Our platform uses a verification system to ensure both parties confirm successful payments. 
                 If a problem occurs, the transaction will timeout and funds will be returned to the original sender.
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Bitcoin Insights Section -->
+    <section class="section bg-secondary/5">
+      <div class="container py-16">
+        <div class="text-center mb-12">
+          <h2 class="font-display text-3xl font-medium text-text-light mb-4">Bitcoin Insights</h2>
+          <p class="text-text-muted max-w-2xl mx-auto">Philosophical reflections on Bitcoin and its impact on humanity</p>
+        </div>
+        
+        <div class="max-w-3xl mx-auto">
+          <div class="card p-8 border-secondary/30">
+            <div v-if="insightLoading || !randomInsight" class="animate-pulse">
+              <div class="h-6 bg-border-dark rounded w-1/3 mb-4"></div>
+              <div class="h-4 bg-border-dark rounded w-full mb-2"></div>
+              <div class="h-4 bg-border-dark rounded w-5/6 mb-2"></div>
+              <div class="h-4 bg-border-dark rounded w-4/6"></div>
+            </div>
+            
+            <div v-else class="transition-opacity duration-500">
+              <h3 class="font-display text-xl font-medium text-secondary mb-4">{{ randomInsight.heading }}</h3>
+              <p class="text-text-light italic">{{ randomInsight.insight }}</p>
+              <div class="text-xs text-text-muted mt-4 text-right">~ From satoshinotebook.com</div>
             </div>
           </div>
         </div>
