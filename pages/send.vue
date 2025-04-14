@@ -37,20 +37,23 @@ const totalFees = computed(() => {
   return platformFee.value + serviceFee.value;
 });
 
-// Total amount with fees subtracted
-const totalInr = computed(() => {
-  return inrAmount.value - totalFees.value;
+// User gets exactly the amount they entered
+const userReceivesInr = computed(() => {
+  return inrAmount.value;
 });
 
-// Total amount in sats - ensure we're asking for exactly what the user entered
-const targetInrAmount = computed(() => inrAmount.value);
+// Calculate how much EXTRA we need to charge in sats to cover the fees
+const feeAdjustedInr = computed(() => {
+  // Add the fees to the base amount to calculate how much to request in sats
+  return inrAmount.value + totalFees.value;
+});
 
-// Calculate sats to request to ensure user gets exact INR amount after fees
+// Calculate sats to request to ensure user gets exact INR amount they entered
 const totalSats = computed(() => {
   if (!currentRate.value) return 0;
-  // Convert target INR to BTC, then to sats (100 million sats per BTC)
-  // We request more sats to ensure user gets exact INR amount after fees
-  return Math.ceil((targetInrAmount.value / currentRate.value) * 100000000);
+  // Convert fee-adjusted INR to BTC, then to sats (100 million sats per BTC)
+  // We add the fees to the INR amount to ensure the user gets exactly what they asked for
+  return Math.ceil((feeAdjustedInr.value / currentRate.value) * 100000000);
 });
 
 // Check if form is valid
@@ -294,8 +297,8 @@ function copyInvoice() {
 onMounted(() => {
   fetchExchangeRate();
   setupRateUpdates();
-  // Random insights feature is disabled
-  // fetchRandomInsight();
+  // Enable random insights feature
+  fetchRandomInsight();
 });
 
 onUnmounted(() => {
@@ -389,8 +392,8 @@ onUnmounted(() => {
             
             <div class="border-t border-border-dark my-2 pt-2">
               <div class="flex justify-between items-center font-medium">
-                <span class="text-text-muted">Total to Receive (UPI)</span>
-                <span class="text-text-light">₹ {{ totalInr }}</span>
+                <span class="text-text-muted">You'll Receive (UPI)</span>
+                <span class="text-text-light">₹ {{ userReceivesInr }}</span>
               </div>
             </div>
             
@@ -408,7 +411,7 @@ onUnmounted(() => {
             </div>
           </div>
           
-          <!-- Bitcoin insight - DISABLED 
+          <!-- Bitcoin insight -->
           <div v-if="randomInsight" class="mt-4 pt-4 border-t border-border-dark">
             <div class="flex items-start">
               <div class="text-primary mr-3">
@@ -423,7 +426,6 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
-          -->
         </div>
         
         <div class="flex justify-end">
@@ -546,7 +548,7 @@ onUnmounted(() => {
           <OrderCard 
             :order="{
               id: orderId,
-              inrAmount: totalInr,
+              inrAmount: userReceivesInr,
               satAmount: totalSats,
               upiId: upiData?.upiId || '',
               expiresAt: null
@@ -578,7 +580,7 @@ onUnmounted(() => {
           <h2 class="font-display text-2xl font-medium text-text-light mb-4">Transaction Complete!</h2>
           
           <p class="text-text-muted mb-8">
-            Your order has been successfully completed. The payment of {{ totalInr }} INR has been sent to your UPI account.
+            Your order has been successfully completed. The payment of {{ userReceivesInr }} INR has been sent to your UPI account.
           </p>
           
           <div class="bg-success/10 border border-success/30 rounded-lg p-4 text-text-light mb-8 mx-auto max-w-md">
@@ -590,7 +592,7 @@ onUnmounted(() => {
               </div>
               <div class="flex justify-between py-2 border-b border-border-dark">
                 <span class="text-text-muted">Amount Received</span>
-                <span class="text-text-light">₹ {{ totalInr }}</span>
+                <span class="text-text-light">₹ {{ userReceivesInr }}</span>
               </div>
               <div class="flex justify-between py-2">
                 <span class="text-text-muted">Sats Sent</span>

@@ -142,10 +142,10 @@ function setupRateUpdates() {
 onMounted(() => {
   fetchExchangeRate();
   setupRateUpdates();
-  // Random insights feature is disabled
-  // if (process.client) {
-  //   startInsightRotation();
-  // }
+  // Enable random insights feature
+  if (process.client) {
+    startInsightRotation();
+  }
 });
 
 onUnmounted(() => {
@@ -338,7 +338,7 @@ onUnmounted(() => {
       </div>
     </section>
     
-    <!-- Bitcoin Insights Section - DISABLED
+    <!-- Bitcoin Insights Section -->
     <section class="section bg-secondary/5">
       <div class="container py-16">
         <div class="text-center mb-12">
@@ -364,7 +364,6 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
-    -->
     
     <!-- CTA Section -->
     <section class="section bg-primary/10">
