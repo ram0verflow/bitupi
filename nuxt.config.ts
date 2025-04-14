@@ -69,12 +69,32 @@ export default defineNuxtConfig({
       handler: '~/server/api/create-order.ts'
     },
     {
+      route: '/api/orders',
+      handler: '~/server/api/orders.ts'
+    },
+    {
+      route: '/api/orders/:id/claim',
+      handler: '~/server/api/orders/[id]/claim.ts'
+    },
+    {
+      route: '/api/orders/:id/receipt',
+      handler: '~/server/api/orders/[id]/receipt.ts'
+    },
+    {
+      route: '/api/random-insight',
+      handler: '~/server/api/random-insight.ts'
+    },
+    {
       route: '/api/sse/exchange-rate',
       handler: '~/server/api/sse/exchange-rate.ts'
     },
     {
       route: '/api/sse/stats',
       handler: '~/server/api/sse/stats.ts'
+    },
+    {
+      route: '/api/sse/orders',
+      handler: '~/server/api/sse/orders.ts'
     },
     {
       route: '/api/sse/order/:id',
