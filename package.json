@@ -3,27 +3,28 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-      "dev": "nuxt dev",
-      "build": "nuxt build",
-      "start": "nuxt start",
-      "generate": "nuxt generate"
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
   },
   "dependencies": {
-      "@pinia/nuxt": "latest",
-      "@socket.io/redis-adapter": "latest",
-      "ioredis": "latest",
-      "jimp": "latest",
-      "nuxt": "latest",
-      "pinia": "latest",
-      "qrcode-reader": "latest",
-      "socket.io": "latest",
-      "socket.io-client": "latest",
-      "vue": "latest"
+    "@pinia/nuxt": "latest",
+    "@socket.io/redis-adapter": "latest",
+    "cheerio": "^1.0.0",
+    "ioredis": "latest",
+    "jimp": "latest",
+    "nuxt": "latest",
+    "pinia": "latest",
+    "qrcode-reader": "latest",
+    "socket.io": "latest",
+    "socket.io-client": "latest",
+    "vue": "latest"
   },
   "devDependencies": {
-      "@nuxtjs/tailwindcss": "latest",
-      "autoprefixer": "latest",
-      "postcss": "latest",
-      "tailwindcss": "latest"
+    "@nuxtjs/tailwindcss": "latest",
+    "autoprefixer": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest"
   }
 }

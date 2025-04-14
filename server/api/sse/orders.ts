@@ -9,18 +9,20 @@ export default defineEventHandler(async (event) => {
   
   const response = event.node.res
   
-  // Send initial message
+  // Send initial list of active orders
+  const activeOrders = Array.from(store.orders.values())
+    .filter(order => order.status === 'pending')
+  
   response.write(`data: ${JSON.stringify({
-    success: true,
-    timestamp: new Date().toISOString(),
-    rates: store.exchangeRate
+    action: 'init',
+    orders: activeOrders
   })}\n\n`)
   
-  // Add this client to the exchange rate SSE clients
-  store.sseClients.exchangeRate.add(response)
+  // Add this client to the orders SSE clients
+  store.sseClients.orders.add(response)
   
   // Handle client disconnect
   response.on('close', () => {
-    store.sseClients.exchangeRate.delete(response)
+    store.sseClients.orders.delete(response)
   })
 })

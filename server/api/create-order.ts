@@ -1,86 +1,85 @@
-import { defineEventHandler, readBody } from 'h3';
-import { getRedisClient, publishMessage } from '../utils/redis';
-import { CHANNELS } from '../websockets/socket-server';
-import crypto from 'crypto';
-import type { IncomingMessage, ServerResponse } from 'http';
-
-// Constants
-const ORDER_TTL = 60 * 60; // 1 hour
-const ORDER_PREFIX = 'order:';
+import { defineEventHandler, readBody } from 'h3'
+import { store, broadcastToSSEClients, Order } from '../index'
+import crypto from 'crypto'
 
 // Generate a random order ID
 function generateOrderId() {
-  return 'order_' + crypto.randomBytes(8).toString('hex');
+  return 'order_' + crypto.randomBytes(8).toString('hex')
 }
 
-// Store order in Redis and publish event
-async function storeOrder(order) {
-  const redis = getRedisClient();
-  const key = ORDER_PREFIX + order.id;
-  
-  await redis.set(key, JSON.stringify(order), 'EX', ORDER_TTL);
-  console.log(`Stored order ${order.id} in Redis`);
-  
-  // Publish order created event
-  publishMessage(CHANNELS.ORDER_CREATED, order);
-  console.log(`Published order created event for ${order.id}`);
+// Generate a random Lightning invoice
+function generateLightningInvoice(satAmount: number) {
+  const randomHex = crypto.randomBytes(32).toString('hex')
+  return `lnbc${satAmount}n1p${randomHex}pp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdqa9qsp5emwvgdkar4ptp0trfzv0hrqfwfku29ru7n5zt45ve5a45qgc3ntq9qyyssq3vrmwj23r0p9m4e5kr65tn8nr350pw3w8ndl98rxfd9l6qj2ydc2n0whucrpzrwxdnf896qn9qy8mskuevm7h4tp6vg68nvtrpw3v83mcp27w5se`
 }
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event);
-    const { amount, upiId, satAmount, serviceFee } = body;
+    const body = await readBody(event)
+    const { inrAmount, upiId, satAmount, upiName, orderType } = body
     
     // Validate inputs
-    if (!amount || isNaN(parseFloat(amount))) {
+    if (!inrAmount || isNaN(parseFloat(inrAmount))) {
       return {
         success: false,
-        error: 'Valid amount required'
-      };
+        error: 'Valid INR amount required'
+      }
     }
     
     if (!upiId || !/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+$/.test(upiId)) {
       return {
         success: false,
         error: 'Valid UPI ID required'
-      };
+      }
     }
     
-    // Generate order ID and timestamps
-    const orderId = generateOrderId();
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + ORDER_TTL * 1000);
+    // Generate order ID and expiration time
+    const orderId = generateOrderId()
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour from now
     
-    // Calculate profit for earner (50% of service fee)
-    const earnerProfit = Math.round(serviceFee * 0.5);
+    // Calculate satoshi amount if not provided
+    const finalSatAmount = satAmount || Math.round(parseFloat(inrAmount) * 100)
     
-    // Create order object
-    const order = {
+    // Generate a Lightning invoice for testing
+    const lightningInvoice = generateLightningInvoice(finalSatAmount)
+    
+    // Create the order
+    const order: Order = {
       id: orderId,
-      amount: parseFloat(amount),
-      upiId: upiId,
-      satAmount: satAmount || Math.round(parseFloat(amount) * 0.056), // Fallback sat conversion
-      profit: earnerProfit,
-      status: 'PENDING',
-      timeCreated: now.toISOString(),
-      timeExpires: expiresAt.toISOString()
-    };
+      inrAmount: parseFloat(inrAmount),
+      satAmount: finalSatAmount,
+      upiId,
+      upiName: upiName || '',
+      status: 'pending',
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      lightning: {
+        invoice: lightningInvoice,
+        paid: false
+      }
+    }
     
-    // Store in Redis and publish event
-    await storeOrder(order);
+    // Store the order
+    store.orders.set(orderId, order)
+    
+    // Broadcast to all clients listening to orders
+    broadcastToSSEClients('orders', {
+      action: 'add',
+      order
+    })
     
     return {
       success: true,
-      orderId,
+      id: orderId,
+      invoice: lightningInvoice,
       order
-    };
+    }
   } catch (error) {
-    console.error('Order creation error:', error);
-    
+    console.error('Create order error:', error)
     return {
       success: false,
-      error: 'Failed to create order',
-      message: error.message
-    };
+      error: 'Failed to create order'
+    }
   }
-});
+})

@@ -35,31 +35,24 @@ async function fetchExchangeRate() {
 function setupRateUpdates() {
   if (process.client) {
     try {
-      const eventSource = new EventSource('/api/sse/exchange-rate');
+      const { $socket } = useNuxtApp();
       
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.rate) {
-            currentRate.value = data.rate;
-          }
-        } catch (e) {
-          console.error('Error parsing SSE message:', e);
+      // Subscribe to exchange rate updates
+      $socket.subscribeToExchangeRates();
+      
+      // Listen for updates
+      $socket.on('exchange-rate', (data) => {
+        if (data && data.rates && data.rates.BTC_INR) {
+          currentRate.value = data.rates.BTC_INR;
         }
-      };
-      
-      eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
-        // Reconnect after a delay
-        setTimeout(() => setupRateUpdates(), 5000);
-      };
+      });
       
       // Cleanup on component unmount
       onUnmounted(() => {
-        eventSource.close();
+        $socket.off('exchange-rate');
       });
     } catch (error) {
-      console.error('Failed to initialize SSE:', error);
+      console.error('Failed to initialize exchange rate updates:', error);
     }
   }
 }

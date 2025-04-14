@@ -124,31 +124,40 @@ async function processQRCode() {
         
         progress.value = 80;
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to process QR code');
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          const errorMsg = result.error || 'Failed to process QR code';
+          throw new Error(errorMsg);
         }
         
-        const result = await response.json();
+        // Validate that it's a UPI QR code
+        if (!result.upiId || !result.meta || !result.meta.isValid) {
+          throw new Error('Invalid QR code: Not a valid UPI QR code');
+        }
+        
         progress.value = 100;
+        console.log('UPI QR code processed successfully:', result);
         
         emit('upload-success', result);
       } catch (error) {
+        console.error('QR processing error:', error);
         errorMessage.value = error.message || 'Failed to process QR code';
-        emit('upload-error', error);
+        emit('upload-error', { message: error.message || 'Failed to process QR code' });
       }
     };
     
     reader.onerror = () => {
       errorMessage.value = 'Error reading file';
-      emit('upload-error', new Error('Error reading file'));
+      emit('upload-error', { message: 'Error reading file' });
     };
     
     reader.readAsDataURL(selectedFile.value);
     
   } catch (error) {
+    console.error('QR uploader error:', error);
     errorMessage.value = error.message || 'An unexpected error occurred';
-    emit('upload-error', error);
+    emit('upload-error', { message: error.message || 'An unexpected error occurred' });
   } finally {
     isProcessing.value = false;
     emit('processing-end');

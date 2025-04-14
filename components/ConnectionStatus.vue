@@ -5,91 +5,52 @@ import { ref, onMounted, onUnmounted } from 'vue';
 const status = ref('connecting');
 const statusMessage = ref('Connecting...');
 const showStatusDetails = ref(false);
-const socket = ref(null);
+
+// Use the injected socket service
+const { $socket } = useNuxtApp();
 
 onMounted(() => {
   // Check if we're on the client side
   if (process.client) {
-    // Get the socket from the Nuxt app context
-    socket.value = window.$nuxt?.$socket;
-    
-    if (socket.value) {
-      // Listen for socket events
-      socket.value.on('connect', () => {
-        status.value = 'connected';
-        statusMessage.value = 'Connected';
-      });
-      
-      socket.value.on('disconnect', () => {
-        status.value = 'disconnected';
-        statusMessage.value = 'Disconnected';
-      });
-      
-      socket.value.on('connect_error', (error) => {
-        status.value = 'disconnected';
-        statusMessage.value = `Connection error: ${error.message}`;
-      });
-      
-      socket.value.on('connect_timeout', () => {
-        status.value = 'disconnected';
-        statusMessage.value = 'Connection timeout';
-      });
-      
-      socket.value.on('reconnecting', (attemptNumber) => {
-        status.value = 'connecting';
-        statusMessage.value = `Reconnecting (attempt ${attemptNumber})...`;
-      });
-      
-      // Check initial connection status
-      if (socket.value.connected) {
-        status.value = 'connected';
-        statusMessage.value = 'Connected';
-      } else {
-        status.value = 'connecting';
-        statusMessage.value = 'Connecting...';
-      }
-    } else {
-      status.value = 'disconnected';
-      statusMessage.value = 'Socket not initialized';
-    }
-    
-    // Fallback using SSE if socket fails
-    const checkSocketTimeout = setTimeout(() => {
+    // Listen for any SSE events to determine if we're connected
+    $socket.on('stats', () => {
       if (status.value !== 'connected') {
-        initSSEFallback();
+        status.value = 'connected';
+        statusMessage.value = 'Connected via SSE';
       }
-    }, 5000);
+    });
     
-    return () => clearTimeout(checkSocketTimeout);
+    $socket.on('exchange-rate', () => {
+      if (status.value !== 'connected') {
+        status.value = 'connected';
+        statusMessage.value = 'Connected via SSE';
+      }
+    });
+    
+    // Initialize connection status check
+    checkConnectionStatus();
   }
 });
 
-function initSSEFallback() {
-  // Only initialize SSE if we're on client and socket isn't working
-  if (!process.client || status.value === 'connected') return;
-  
-  try {
-    const eventSource = new EventSource('/api/sse/stats');
+function checkConnectionStatus() {
+  // Check if we're connected
+  if ($socket.isConnected()) {
+    status.value = 'connected';
+    statusMessage.value = 'Connected via SSE';
+  } else {
+    status.value = 'connecting';
+    statusMessage.value = 'Connecting...';
     
-    eventSource.onopen = () => {
-      status.value = 'connected';
-      statusMessage.value = 'Connected (SSE)';
-    };
-    
-    eventSource.onerror = () => {
-      if (status.value === 'connected') {
-        status.value = 'disconnected';
-        statusMessage.value = 'SSE Connection lost';
-      }
-    };
-    
-    onUnmounted(() => {
-      eventSource.close();
-    });
-  } catch (error) {
-    console.error('Failed to initialize SSE:', error);
+    // Try again after a delay
+    setTimeout(checkConnectionStatus, 2000);
   }
 }
+
+onUnmounted(() => {
+  // Clean up event listeners
+  $socket.off('stats');
+  $socket.off('exchange-rate');
+});
 
 function toggleStatusDetails() {
   showStatusDetails.value = !showStatusDetails.value;

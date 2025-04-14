@@ -1,342 +1,259 @@
-import { io, Socket } from 'socket.io-client';
-import { defineNuxtPlugin, useRuntimeConfig } from '#app';
+import { defineNuxtPlugin } from '#app'
 
+/**
+ * Plugin to manage SSE connections for real-time updates
+ */
 export default defineNuxtPlugin((nuxtApp) => {
-  // Socket instance with fallback mechanisms
-  let socket: Socket | null = null;
-  let sseConnections = new Map();
-  let isUsingSSE = false;
-  let connectionAttempts = 0;
-  const MAX_WEBSOCKET_ATTEMPTS = 3;
-  const config = useRuntimeConfig();
+  // Store SSE connections
+  const sseConnections = new Map()
   
-  // Connect to WebSocket server with fallback strategy
-  const connect = () => {
-    if (socket && socket.connected) return socket;
+  // Connect to exchange rate updates
+  const setupExchangeRateSSE = () => {
+    if (process.server) return null
     
-    // Get base URL from runtime config
-    const baseUrl = config.public.wsUrl || 'http://localhost:3000';
-    
-    // If we've tried WebSockets too many times, use long polling
-    if (connectionAttempts >= MAX_WEBSOCKET_ATTEMPTS) {
-      console.log('Switching to long polling transport only');
+    try {
+      // Close any existing connection
+      if (sseConnections.has('exchange-rate')) {
+        sseConnections.get('exchange-rate').close()
+      }
       
-      // Connect using only long polling
-      socket = io(baseUrl, {
-        transports: ['polling'],
-        autoConnect: true,
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 2000, 
-        reconnectionDelayMax: 10000,
-        timeout: 30000,
-        forceNew: true,
-        extraHeaders: {
-          "Cache-Control": "no-cache",
-          "Pragma": "no-cache"
+      const eventSource = new EventSource('/api/sse/exchange-rate')
+      
+      eventSource.onopen = () => {
+        console.log('Exchange rate SSE connected')
+      }
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          nuxtApp.hook('sse:exchange-rate', data)
+        } catch (error) {
+          console.error('Error parsing exchange rate SSE data:', error)
         }
-      });
-    } else {
-      // Try WebSocket first, with polling as fallback
-      socket = io(baseUrl, {
-        transports: ['websocket', 'polling'],
-        autoConnect: true,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        forceNew: true
-      });
+      }
       
-      connectionAttempts++;
-    }
-    
-    // Setup enhanced error handling
-    socket.on('connect', () => {
-      console.log('Socket connected successfully:', socket?.id);
-      connectionAttempts = 0; // Reset counter on successful connection
-    });
-    
-    socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
-      // If server disconnected us, try to reconnect
-      if (reason === 'io server disconnect') {
+      eventSource.onerror = (error) => {
+        console.error('Exchange rate SSE error:', error)
+        // Try to reconnect after a delay
         setTimeout(() => {
-          socket?.connect();
-        }, 5000);
-      }
-    });
-    
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      if (connectionAttempts >= MAX_WEBSOCKET_ATTEMPTS && !isUsingSSE) {
-        console.log('WebSocket connection failed, trying SSE fallback');
-        setupSSEFallback();
-      } else {
-        // Retry with exponential backoff
-        const delay = Math.min(1000 * Math.pow(2, connectionAttempts), 10000);
-        console.log(`Will retry connection in ${delay}ms`);
-        setTimeout(() => {
-          if (socket && !socket.connected) {
-            socket.connect();
+          if (sseConnections.has('exchange-rate')) {
+            setupExchangeRateSSE()
           }
-        }, delay);
+        }, 3000)
       }
-    });
-    
-    socket.on('reconnect', (attemptNumber) => {
-      console.log(`Socket reconnected after ${attemptNumber} attempts`);
-    });
-    
-    socket.on('reconnect_attempt', (attemptNumber) => {
-      console.log(`Socket reconnection attempt #${attemptNumber}`);
-    });
-    
-    socket.on('reconnect_failed', () => {
-      console.error('Socket reconnection failed');
-      if (!isUsingSSE) {
-        setupSSEFallback();
-      }
-    });
-    
-    socket.io.on("error", (error) => {
-      console.error('Socket.io manager error:', error);
-    });
-    
-    socket.io.on("reconnect_error", (error) => {
-      console.error('Socket.io reconnect error:', error);
-    });
-    
-    return socket;
-  };
-  
-  // SSE fallback for critical updates when socket fails
-  const setupSSEFallback = () => {
-    isUsingSSE = true;
-    console.log('Setting up SSE fallback');
-    
-    // Set up SSE for order updates
-    const config = useRuntimeConfig();
-    const baseUrl = config.public.apiBaseUrl || 'http://localhost:3000';
-    
-    // For exchange rate updates
-    const exchangeSource = new EventSource(`${baseUrl}/api/sse/exchange-rate`);
-    exchangeSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        nuxtApp.hook('socket:exchange-update', data);
-      } catch (e) {
-        console.error('Error parsing SSE exchange rate data', e);
-      }
-    };
-    
-    exchangeSource.onerror = (error) => {
-      console.error('SSE exchange rate error', error);
-      exchangeSource.close();
       
-      // Try to reconnect SSE after delay
-      setTimeout(() => {
-        setupSSEFallback();
-      }, 5000);
-    };
-    
-    sseConnections.set('exchange', exchangeSource);
-  };
-  
-  // Clean up SSE connections
-  const cleanupSSE = () => {
-    if (isUsingSSE) {
-      sseConnections.forEach((source) => {
-        source.close();
-      });
-      sseConnections.clear();
-      isUsingSSE = false;
+      sseConnections.set('exchange-rate', eventSource)
+      return eventSource
+    } catch (error) {
+      console.error('Failed to set up exchange rate SSE:', error)
+      return null
     }
-  };
-  
-  // Join an order room with Redis persistence
-  const joinOrder = (orderId: string) => {
-    if (!socket || !socket.connected) connect();
-    
-    if (socket && socket.connected) {
-      socket.emit('join:order', orderId);
-      console.log(`Joined order room: ${orderId}`);
-      
-      // Set up order-specific SSE fallback
-      if (isUsingSSE && !sseConnections.has(`order:${orderId}`)) {
-        const config = useRuntimeConfig();
-        const baseUrl = config.public.apiBaseUrl || 'http://localhost:3000';
-        const orderSource = new EventSource(`${baseUrl}/api/sse/order/${orderId}`);
-        
-        orderSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            nuxtApp.hook(`socket:order-update:${orderId}`, data);
-          } catch (e) {
-            console.error(`Error parsing SSE order data for ${orderId}`, e);
-          }
-        };
-        
-        sseConnections.set(`order:${orderId}`, orderSource);
-      }
-    } else {
-      console.error('Cannot join order room, socket not connected');
-    }
-  };
-  
-  // Leave an order room
-  const leaveOrder = (orderId: string) => {
-    if (socket && socket.connected) {
-      socket.emit('leave:order', orderId);
-      console.log(`Left order room: ${orderId}`);
-    }
-    
-    // Close SSE connection if exists
-    if (sseConnections.has(`order:${orderId}`)) {
-      sseConnections.get(`order:${orderId}`).close();
-      sseConnections.delete(`order:${orderId}`);
-    }
-  };
-  
-  // Subscribe to exchange rate updates
-  const subscribeToExchangeRates = () => {
-    if (!socket || !socket.connected) connect();
-    
-    if (socket && socket.connected) {
-      socket.emit('join:exchange');
-      console.log('Subscribed to exchange rate updates');
-    } else {
-      console.error('Cannot subscribe to exchange rates, socket not connected');
-      if (!isUsingSSE) {
-        setupSSEFallback();
-      }
-    }
-  };
-  
-  // Subscribe to platform stats
-  const subscribeToStats = () => {
-    if (!socket || !socket.connected) connect();
-    
-    if (socket && socket.connected) {
-      socket.emit('join:stats');
-      console.log('Subscribed to platform stats');
-    } else {
-      console.error('Cannot subscribe to stats, socket not connected');
-    }
-  };
-  
-  // Listen for specific events with hook integration
-  const on = (event: string, callback: (...args: any[]) => void) => {
-    if (!socket || !socket.connected) connect();
-    
-    if (socket && socket.connected) {
-      socket.on(event, callback);
-      
-      // Also register a hook so SSE can trigger the same callback
-      nuxtApp.hook(`socket:${event}`, callback);
-    } else {
-      console.error(`Cannot listen for event ${event}, socket not connected`);
-      // Only register the hook for SSE
-      nuxtApp.hook(`socket:${event}`, callback);
-    }
-  };
-  
-  // Remove event listener
-  const off = (event: string, callback?: (...args: any[]) => void) => {
-    if (socket) {
-      if (callback) {
-        socket.off(event, callback);
-      } else {
-        socket.off(event);
-      }
-    }
-    
-    // Remove hook if possible
-    if (callback) {
-      nuxtApp.hooks[`socket:${event}`] = 
-        nuxtApp.hooks[`socket:${event}`]?.filter(h => h !== callback) || [];
-    } else {
-      delete nuxtApp.hooks[`socket:${event}`];
-    }
-  };
-  
-  // Disconnect socket and clean up SSE
-  const disconnect = () => {
-    if (socket) {
-      socket.disconnect();
-      socket = null;
-    }
-    
-    cleanupSSE();
-    connectionAttempts = 0;
-  };
-  
-  // Check connection state
-  const isConnected = () => {
-    return (socket && socket.connected) || isUsingSSE;
-  };
-  
-  // Get current transport
-  const getTransport = () => {
-    if (isUsingSSE) return 'sse';
-    if (!socket) return 'none';
-    return socket.io.engine.transport.name;
-  };
-  
-  // Heartbeat to detect zombie connections
-  let heartbeatInterval: any = null;
-  
-  const startHeartbeat = () => {
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-    
-    heartbeatInterval = setInterval(() => {
-      if (socket && socket.connected) {
-        socket.emit('heartbeat', Date.now());
-      } else if (!isUsingSSE) {
-        console.log('Heartbeat detected disconnected socket, reconnecting...');
-        connect();
-      }
-    }, 30000); // 30 second heartbeat
-  };
-  
-  const stopHeartbeat = () => {
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      heartbeatInterval = null;
-    }
-  };
-  
-  // Auto-connect when app starts
-  if (process.client) {
-    // Only run on client-side
-    nuxtApp.hook('app:mounted', () => {
-      connect();
-      startHeartbeat();
-    });
-    
-    // Disconnect when page is closed
-    nuxtApp.hook('app:beforeUnmount', () => {
-      stopHeartbeat();
-      disconnect();
-    });
   }
   
-  // Export socket functions
+  // Connect to stats updates
+  const setupStatsSSE = () => {
+    if (process.server) return null
+    
+    try {
+      // Close any existing connection
+      if (sseConnections.has('stats')) {
+        sseConnections.get('stats').close()
+      }
+      
+      const eventSource = new EventSource('/api/sse/stats')
+      
+      eventSource.onopen = () => {
+        console.log('Stats SSE connected')
+      }
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          nuxtApp.hook('sse:stats', data)
+        } catch (error) {
+          console.error('Error parsing stats SSE data:', error)
+        }
+      }
+      
+      eventSource.onerror = (error) => {
+        console.error('Stats SSE error:', error)
+        // Try to reconnect after a delay
+        setTimeout(() => {
+          if (sseConnections.has('stats')) {
+            setupStatsSSE()
+          }
+        }, 3000)
+      }
+      
+      sseConnections.set('stats', eventSource)
+      return eventSource
+    } catch (error) {
+      console.error('Failed to set up stats SSE:', error)
+      return null
+    }
+  }
+  
+  // Connect to orders updates
+  const setupOrdersSSE = () => {
+    if (process.server) return null
+    
+    try {
+      // Close any existing connection
+      if (sseConnections.has('orders')) {
+        sseConnections.get('orders').close()
+      }
+      
+      const eventSource = new EventSource('/api/sse/orders')
+      
+      eventSource.onopen = () => {
+        console.log('Orders SSE connected')
+      }
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          nuxtApp.hook('sse:orders', data)
+        } catch (error) {
+          console.error('Error parsing orders SSE data:', error)
+        }
+      }
+      
+      eventSource.onerror = (error) => {
+        console.error('Orders SSE error:', error)
+        // Try to reconnect after a delay
+        setTimeout(() => {
+          if (sseConnections.has('orders')) {
+            setupOrdersSSE()
+          }
+        }, 3000)
+      }
+      
+      sseConnections.set('orders', eventSource)
+      return eventSource
+    } catch (error) {
+      console.error('Failed to set up orders SSE:', error)
+      return null
+    }
+  }
+  
+  // Connect to specific order updates
+  const joinOrder = (orderId: string) => {
+    if (process.server || !orderId) return null
+    
+    try {
+      const connectionKey = `order:${orderId}`
+      
+      // Close any existing connection for this order
+      if (sseConnections.has(connectionKey)) {
+        sseConnections.get(connectionKey).close()
+      }
+      
+      const eventSource = new EventSource(`/api/sse/order/${orderId}`)
+      
+      eventSource.onopen = () => {
+        console.log(`Order ${orderId} SSE connected`)
+      }
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          // Fire both a specific event for this order and a generic order update event
+          nuxtApp.hook(`sse:order:${orderId}`, data)
+          nuxtApp.hook('sse:order-update', { ...data, orderId })
+        } catch (error) {
+          console.error(`Error parsing order ${orderId} SSE data:`, error)
+        }
+      }
+      
+      eventSource.onerror = (error) => {
+        console.error(`Order ${orderId} SSE error:`, error)
+        // Try to reconnect after a delay
+        setTimeout(() => {
+          if (sseConnections.has(connectionKey)) {
+            joinOrder(orderId)
+          }
+        }, 3000)
+      }
+      
+      sseConnections.set(connectionKey, eventSource)
+      return eventSource
+    } catch (error) {
+      console.error(`Failed to set up order ${orderId} SSE:`, error)
+      return null
+    }
+  }
+  
+  // Disconnect from specific order updates
+  const leaveOrder = (orderId: string) => {
+    if (!orderId) return
+    
+    const connectionKey = `order:${orderId}`
+    if (sseConnections.has(connectionKey)) {
+      sseConnections.get(connectionKey).close()
+      sseConnections.delete(connectionKey)
+    }
+  }
+  
+  // Register event listener
+  const on = (event: string, callback: Function) => {
+    nuxtApp.hook(`sse:${event}`, callback)
+  }
+  
+  // Remove event listener
+  const off = (event: string, callback?: Function) => {
+    if (callback) {
+      // Remove specific callback
+      const hookName = `sse:${event}`
+      if (nuxtApp.hooks[hookName]) {
+        nuxtApp.hooks[hookName] = nuxtApp.hooks[hookName].filter(hook => hook !== callback)
+      }
+    } else {
+      // Remove all callbacks for this event
+      delete nuxtApp.hooks[`sse:${event}`]
+    }
+  }
+  
+  // Close all connections
+  const disconnect = () => {
+    sseConnections.forEach(connection => {
+      connection.close()
+    })
+    sseConnections.clear()
+  }
+  
+  // Check if any connections are active
+  const isConnected = () => {
+    return sseConnections.size > 0
+  }
+  
+  // Initialize connections on app mount
+  if (process.client) {
+    nuxtApp.hook('app:mounted', () => {
+      setupExchangeRateSSE()
+      setupStatsSSE()
+    })
+    
+    // Clean up connections on app unmount
+    nuxtApp.hook('app:beforeUnmount', () => {
+      disconnect()
+    })
+  }
+  
+  // Provide functions to components
   return {
     provide: {
       socket: {
-        connect,
-        disconnect,
+        // Keep socket naming for backward compatibility
         joinOrder,
         leaveOrder,
-        subscribeToExchangeRates,
-        subscribeToStats,
+        subscribeToExchangeRates: setupExchangeRateSSE,
+        subscribeToStats: setupStatsSSE,
+        subscribeToOrders: setupOrdersSSE,
         on,
         off,
         isConnected,
-        getTransport,
+        getTransport: () => 'sse'
       }
     }
-  };
-});
+  }
+})

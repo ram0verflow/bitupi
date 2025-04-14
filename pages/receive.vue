@@ -51,50 +51,39 @@ async function fetchOrders() {
 function setupOrderUpdates() {
   if (process.client) {
     try {
-      const es = new EventSource('/api/sse/orders');
+      const { $socket } = useNuxtApp();
       
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.action === 'add') {
-            // Add new order to the list
-            orders.value.unshift(data.order);
-          } else if (data.action === 'update') {
-            // Update existing order
-            const index = orders.value.findIndex(o => o.id === data.order.id);
-            if (index !== -1) {
-              orders.value[index] = data.order;
+      // Subscribe to orders updates
+      $socket.subscribeToOrders();
+      
+      // Listen for orders updates
+      $socket.on('orders', (data) => {
+        if (data.action === 'init') {
+          // Initialize orders list
+          orders.value = data.orders || [];
+        } else if (data.action === 'add') {
+          // Add new order to the list
+          orders.value.unshift(data.order);
+        } else if (data.action === 'update') {
+          // Update existing order
+          const index = orders.value.findIndex(o => o.id === data.order.id);
+          if (index !== -1) {
+            orders.value[index] = data.order;
+            
+            // If this is our selected order, update status
+            if (selectedOrder.value && selectedOrder.value.id === data.order.id) {
+              selectedOrder.value = data.order;
+              orderStatus.value = data.order.status;
               
-              // If this is our selected order, update status
-              if (selectedOrder.value && selectedOrder.value.id === data.order.id) {
-                selectedOrder.value = data.order;
-                orderStatus.value = data.order.status;
-                
-                if (data.order.status === 'completed') {
-                  step.value = 3; // Move to complete step
-                }
+              if (data.order.status === 'completed') {
+                step.value = 3; // Move to complete step
               }
             }
-          } else if (data.action === 'remove') {
-            // Remove order from list
-            const index = orders.value.findIndex(o => o.id === data.orderId);
-            if (index !== -1) {
-              orders.value.splice(index, 1);
-            }
           }
-        } catch (e) {
-          console.error('Error parsing SSE message:', e);
         }
-      };
-      
-      es.onerror = (error) => {
-        console.error('SSE connection error:', error);
-      };
-      
-      eventSource.value = es;
+      });
     } catch (error) {
-      console.error('Failed to initialize SSE:', error);
+      console.error('Failed to initialize orders updates:', error);
     }
   }
 }
@@ -139,33 +128,21 @@ async function claimOrder(order) {
 function setupSpecificOrderUpdates(id) {
   if (process.client && id) {
     try {
-      // Close existing SSE connection
-      if (eventSource.value && eventSource.value !== null) {
-        eventSource.value.close();
-      }
+      const { $socket } = useNuxtApp();
       
-      const es = new EventSource(`/api/sse/order/${id}`);
+      // Join the order room for updates
+      $socket.joinOrder(id);
       
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.status) {
-            orderStatus.value = data.status;
-            
-            if (data.status === 'completed') {
-              step.value = 3; // Move to complete step
-            }
+      // Listen for updates for this specific order
+      $socket.on(`order:${id}`, (data) => {
+        if (data && data.status) {
+          orderStatus.value = data.status;
+          
+          if (data.status === 'completed') {
+            step.value = 3; // Move to complete step
           }
-        } catch (e) {
-          console.error('Error parsing order update:', e);
         }
-      };
-      
-      es.onerror = (error) => {
-        console.error('Order update SSE error:', error);
-      };
-      
-      eventSource.value = es;
+      });
     } catch (error) {
       console.error('Failed to initialize order updates:', error);
     }
@@ -230,16 +207,19 @@ function handleOrderAction(order) {
 
 // Reset process and go back to marketplace
 function resetProcess() {
+  const { $socket } = useNuxtApp();
+  
+  // Leave the order room if we were in one
+  if (selectedOrder.value) {
+    $socket.leaveOrder(selectedOrder.value.id);
+    $socket.off(`order:${selectedOrder.value.id}`);
+  }
+  
   step.value = 1;
   selectedOrder.value = null;
   receipt.value = null;
   lightningAddress.value = '';
   errorMessage.value = '';
-  
-  // Close specific order SSE if any
-  if (eventSource.value && eventSource.value !== null) {
-    eventSource.value.close();
-  }
   
   // Set up marketplace updates again
   setupOrderUpdates();
@@ -253,7 +233,18 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  // Cleanup SSE connection
+  const { $socket } = useNuxtApp();
+  
+  // Clean up orders event listener
+  $socket.off('orders');
+  
+  // Leave order room if we were in one
+  if (selectedOrder.value) {
+    $socket.leaveOrder(selectedOrder.value.id);
+    $socket.off(`order:${selectedOrder.value.id}`);
+  }
+  
+  // Cleanup any remaining SSE connection
   if (eventSource.value && eventSource.value !== null) {
     eventSource.value.close();
   }

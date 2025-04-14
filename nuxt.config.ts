@@ -12,6 +12,7 @@ export default defineNuxtConfig({
       strict: false
     },
   },
+  
 
   tailwindcss: {
     cssPath: '~/assets/css/main.css',
@@ -91,7 +92,6 @@ export default defineNuxtConfig({
     // Variables also exposed to the client
     public: {
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
-      wsUrl: process.env.WS_URL || 'http://localhost:3000',
 
       // Feature flags
       enableRealExchangeRates: process.env.ENABLE_REAL_EXCHANGE_RATES === 'true' || false,

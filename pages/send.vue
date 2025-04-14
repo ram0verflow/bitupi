@@ -14,26 +14,43 @@ const orderId = ref(null);
 const orderStatus = ref('pending');
 const lightningInvoice = ref('');
 const exchangeFee = ref(0.02); // 2% default
+const serviceFeePercent = ref(0.01); // 1% service fee
 const isSubmitting = ref(false);
 const errorMessage = ref('');
 const qrProcessing = ref(false);
 const eventSource = ref(null);
+const randomFact = ref('');
+const factCategory = ref('');
 
-// Service fee calculation
-const serviceFee = computed(() => {
+// Platform fee calculation
+const platformFee = computed(() => {
   return Math.ceil(inrAmount.value * exchangeFee.value);
 });
 
-// Total amount with fees
-const totalInr = computed(() => {
-  return inrAmount.value - serviceFee.value;
+// Service fee calculation (for profit)
+const serviceFee = computed(() => {
+  return Math.ceil(inrAmount.value * serviceFeePercent.value);
 });
 
-// Total amount in sats
+// Total fees
+const totalFees = computed(() => {
+  return platformFee.value + serviceFee.value;
+});
+
+// Total amount with fees subtracted
+const totalInr = computed(() => {
+  return inrAmount.value - totalFees.value;
+});
+
+// Total amount in sats - ensure we're asking for exactly what the user entered
+const targetInrAmount = computed(() => inrAmount.value);
+
+// Calculate sats to request to ensure user gets exact INR amount after fees
 const totalSats = computed(() => {
   if (!currentRate.value) return 0;
-  // Convert INR to BTC, then to sats (100 million sats per BTC)
-  return Math.floor((totalInr.value / currentRate.value) * 100000000);
+  // Convert target INR to BTC, then to sats (100 million sats per BTC)
+  // We request more sats to ensure user gets exact INR amount after fees
+  return Math.ceil((targetInrAmount.value / currentRate.value) * 100000000);
 });
 
 // Check if form is valid
@@ -58,30 +75,45 @@ async function fetchExchangeRate() {
   }
 }
 
+// Get a random Bitcoin fact
+async function fetchRandomFact() {
+  try {
+    const response = await fetch('/api/random-fact');
+    
+    if (!response.ok) {
+      console.error('Failed to fetch random fact');
+      return;
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.fact) {
+      randomFact.value = data.fact;
+      factCategory.value = data.category || '';
+    }
+  } catch (error) {
+    console.error('Error fetching random fact:', error);
+    // Don't show error to user for this non-critical feature
+  }
+}
+
 // Set up SSE for real-time rate updates
 function setupRateUpdates() {
   if (process.client) {
     try {
-      const es = new EventSource('/api/sse/exchange-rate');
+      const { $socket } = useNuxtApp();
       
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.rate) {
-            currentRate.value = data.rate;
-          }
-        } catch (e) {
-          console.error('Error parsing SSE message:', e);
+      // Subscribe to exchange rate updates
+      $socket.subscribeToExchangeRates();
+      
+      // Listen for updates
+      $socket.on('exchange-rate', (data) => {
+        if (data && data.rates && data.rates.BTC_INR) {
+          currentRate.value = data.rates.BTC_INR;
         }
-      };
-      
-      es.onerror = (error) => {
-        console.error('SSE connection error:', error);
-      };
-      
-      eventSource.value = es;
+      });
     } catch (error) {
-      console.error('Failed to initialize SSE:', error);
+      console.error('Failed to initialize exchange rate updates:', error);
     }
   }
 }
@@ -165,35 +197,23 @@ async function createOrder() {
 function setupOrderUpdates(id) {
   if (process.client && id) {
     try {
-      // Close existing SSE connection if any
-      if (eventSource.value && eventSource.value !== null) {
-        eventSource.value.close();
-      }
+      const { $socket } = useNuxtApp();
       
-      const es = new EventSource(`/api/sse/order/${id}`);
+      // Join the order room to receive updates
+      $socket.joinOrder(id);
       
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.status) {
-            orderStatus.value = data.status;
-            
-            if (data.status === 'completed') {
-              step.value = 5; // Move to complete step
-            } else if (data.status === 'processing') {
-              step.value = 4; // Move to waiting for confirmation step
-            }
+      // Listen for updates for this specific order
+      $socket.on(`order:${id}`, (data) => {
+        if (data && data.status) {
+          orderStatus.value = data.status;
+          
+          if (data.status === 'completed') {
+            step.value = 5; // Move to complete step
+          } else if (data.status === 'processing') {
+            step.value = 4; // Move to waiting for confirmation step
           }
-        } catch (e) {
-          console.error('Error parsing order update:', e);
         }
-      };
-      
-      es.onerror = (error) => {
-        console.error('Order update SSE error:', error);
-      };
-      
-      eventSource.value = es;
+      });
     } catch (error) {
       console.error('Failed to initialize order updates:', error);
     }
@@ -216,6 +236,14 @@ function prevStep() {
 
 // Reset the whole form
 function resetForm() {
+  const { $socket } = useNuxtApp();
+  
+  // Leave the order room if we were in one
+  if (orderId.value) {
+    $socket.leaveOrder(orderId.value);
+    $socket.off(`order:${orderId.value}`);
+  }
+  
   step.value = 1;
   inrAmount.value = 500;
   upiData.value = null;
@@ -223,12 +251,6 @@ function resetForm() {
   orderStatus.value = 'pending';
   lightningInvoice.value = '';
   errorMessage.value = '';
-  
-  // Close SSE connection
-  if (eventSource.value && eventSource.value !== null) {
-    eventSource.value.close();
-    eventSource.value = null;
-  }
   
   // Setup rate updates again
   setupRateUpdates();
@@ -252,12 +274,19 @@ function copyInvoice() {
 onMounted(() => {
   fetchExchangeRate();
   setupRateUpdates();
+  fetchRandomFact();
 });
 
 onUnmounted(() => {
-  // Clean up SSE connections
-  if (eventSource.value && eventSource.value !== null) {
-    eventSource.value.close();
+  const { $socket } = useNuxtApp();
+  
+  // Clean up event listeners
+  $socket.off('exchange-rate');
+  
+  // Leave order room if we were in one
+  if (orderId.value) {
+    $socket.leaveOrder(orderId.value);
+    $socket.off(`order:${orderId.value}`);
   }
 });
 </script>
@@ -328,19 +357,24 @@ onUnmounted(() => {
             </div>
             
             <div class="flex justify-between items-center">
-              <span class="text-text-muted">Service Fee ({{ exchangeFee * 100 }}%)</span>
+              <span class="text-text-muted">Platform Fee ({{ exchangeFee * 100 }}%)</span>
+              <span class="text-text-light">₹ {{ platformFee }}</span>
+            </div>
+            
+            <div class="flex justify-between items-center">
+              <span class="text-text-muted">Service Fee ({{ serviceFeePercent * 100 }}%)</span>
               <span class="text-text-light">₹ {{ serviceFee }}</span>
             </div>
             
             <div class="border-t border-border-dark my-2 pt-2">
               <div class="flex justify-between items-center font-medium">
-                <span class="text-text-muted">Total to Send (UPI)</span>
+                <span class="text-text-muted">Total to Receive (UPI)</span>
                 <span class="text-text-light">₹ {{ totalInr }}</span>
               </div>
             </div>
             
             <div class="flex justify-between items-center mt-4">
-              <span class="text-text-muted">You Receive</span>
+              <span class="text-text-muted">You Pay</span>
               <span class="text-primary font-medium">{{ totalSats.toLocaleString() }} sats</span>
             </div>
             
@@ -350,6 +384,21 @@ onUnmounted(() => {
                 <AnimatedRateCounter :value="currentRate" prefix="₹ " :decimals="2" />
                 <span class="ml-1">per BTC</span>
               </span>
+            </div>
+          </div>
+          
+          <!-- Bitcoin fact -->
+          <div v-if="randomFact" class="mt-4 pt-4 border-t border-border-dark">
+            <div class="flex items-start">
+              <div class="text-primary mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm text-text-light italic">{{ randomFact }}</p>
+                <span v-if="factCategory" class="text-xs text-text-muted">Category: {{ factCategory }}</span>
+              </div>
             </div>
           </div>
         </div>
