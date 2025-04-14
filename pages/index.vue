@@ -33,47 +33,83 @@ async function fetchExchangeRate() {
   }
 }
 
-// Fetch a random philosophical insight
+// Fetch a random philosophical insight with error handling and retry
 async function fetchRandomInsight() {
+  if (insightLoading.value) return; // Don't allow concurrent fetches
+  
   try {
     insightLoading.value = true;
-    const response = await fetch('/api/random-insight');
+    
+    // Using AbortController to set a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch('/api/random-insight', {
+      signal: controller.signal,
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
-      console.error('Failed to fetch insight');
-      return;
+      throw new Error('Failed to fetch insight');
     }
     
     const data = await response.json();
     
     if (data.success) {
+      // Fade out the current insight before updating
+      if (randomInsight.value) {
+        // Small artificial delay for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      
       randomInsight.value = {
         heading: data.heading,
-        insight: data.insight
+        insight: data.insight,
+        isFallback: data.fallback || false
       };
     }
   } catch (error) {
     console.error('Error fetching insight:', error);
+    // Don't update UI on error, keep the current insight
   } finally {
     insightLoading.value = false;
   }
 }
 
-// Rotate insights automatically
+// Rotate insights automatically with progressive intervals
 let insightInterval;
+let fetchAttempts = 0;
+const maxInterval = 30000; // 30 seconds max
+const minInterval = 10000; // 10 seconds min
+
 function startInsightRotation() {
   // First fetch immediately
   fetchRandomInsight();
   
-  // Then set up interval
-  insightInterval = setInterval(() => {
-    fetchRandomInsight();
-  }, 15000); // Rotate every 15 seconds
+  // Then set up interval with progressive timing
+  function scheduleNextFetch() {
+    // Calculate next interval - increases with each fetch, up to maxInterval
+    const interval = Math.min(maxInterval, minInterval + (fetchAttempts * 5000));
+    
+    insightInterval = setTimeout(() => {
+      fetchRandomInsight();
+      fetchAttempts++;
+      scheduleNextFetch();
+    }, interval);
+  }
+  
+  scheduleNextFetch();
 }
 
 function stopInsightRotation() {
   if (insightInterval) {
-    clearInterval(insightInterval);
+    clearTimeout(insightInterval);
+    insightInterval = null;
   }
 }
 

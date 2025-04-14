@@ -20,7 +20,7 @@ const errorMessage = ref('');
 const qrProcessing = ref(false);
 const eventSource = ref(null);
 const randomInsight = ref(null);
-const insightLoading = ref(false);
+const insightLoading = ref(false); // Track loading state of insights
 
 // Platform fee calculation
 const platformFee = computed(() => {
@@ -77,13 +77,27 @@ async function fetchExchangeRate() {
 
 // Get a random Bitcoin insight
 async function fetchRandomInsight() {
+  // If still loading, don't fetch again
+  if (insightLoading.value) return;
+  
   try {
     insightLoading.value = true;
-    const response = await fetch('/api/random-insight');
+    
+    // Using AbortController to set a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch('/api/random-insight', {
+      signal: controller.signal,
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
-      console.error('Failed to fetch random insight');
-      return;
+      throw new Error('Failed to fetch random insight');
     }
     
     const data = await response.json();
@@ -91,7 +105,8 @@ async function fetchRandomInsight() {
     if (data.success) {
       randomInsight.value = {
         heading: data.heading,
-        insight: data.insight
+        insight: data.insight,
+        isFallback: data.fallback || false
       };
     }
   } catch (error) {
