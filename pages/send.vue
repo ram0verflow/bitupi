@@ -294,7 +294,8 @@ function copyInvoice() {
 onMounted(() => {
   fetchExchangeRate();
   setupRateUpdates();
-  fetchRandomInsight();
+  // Random insights feature is disabled
+  // fetchRandomInsight();
 });
 
 onUnmounted(() => {
@@ -407,7 +408,7 @@ onUnmounted(() => {
             </div>
           </div>
           
-          <!-- Bitcoin insight -->
+          <!-- Bitcoin insight - DISABLED 
           <div v-if="randomInsight" class="mt-4 pt-4 border-t border-border-dark">
             <div class="flex items-start">
               <div class="text-primary mr-3">
@@ -422,6 +423,7 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
+          -->
         </div>
         
         <div class="flex justify-end">
