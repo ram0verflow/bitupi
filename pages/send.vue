@@ -19,8 +19,8 @@ const isSubmitting = ref(false);
 const errorMessage = ref('');
 const qrProcessing = ref(false);
 const eventSource = ref(null);
-const randomFact = ref('');
-const factCategory = ref('');
+const randomInsight = ref(null);
+const insightLoading = ref(false);
 
 // Platform fee calculation
 const platformFee = computed(() => {
@@ -75,25 +75,30 @@ async function fetchExchangeRate() {
   }
 }
 
-// Get a random Bitcoin fact
-async function fetchRandomFact() {
+// Get a random Bitcoin insight
+async function fetchRandomInsight() {
   try {
-    const response = await fetch('/api/random-fact');
+    insightLoading.value = true;
+    const response = await fetch('/api/random-insight');
     
     if (!response.ok) {
-      console.error('Failed to fetch random fact');
+      console.error('Failed to fetch random insight');
       return;
     }
     
     const data = await response.json();
     
-    if (data.success && data.fact) {
-      randomFact.value = data.fact;
-      factCategory.value = data.category || '';
+    if (data.success) {
+      randomInsight.value = {
+        heading: data.heading,
+        insight: data.insight
+      };
     }
   } catch (error) {
-    console.error('Error fetching random fact:', error);
+    console.error('Error fetching random insight:', error);
     // Don't show error to user for this non-critical feature
+  } finally {
+    insightLoading.value = false;
   }
 }
 
@@ -274,7 +279,7 @@ function copyInvoice() {
 onMounted(() => {
   fetchExchangeRate();
   setupRateUpdates();
-  fetchRandomFact();
+  fetchRandomInsight();
 });
 
 onUnmounted(() => {
@@ -387,8 +392,8 @@ onUnmounted(() => {
             </div>
           </div>
           
-          <!-- Bitcoin fact -->
-          <div v-if="randomFact" class="mt-4 pt-4 border-t border-border-dark">
+          <!-- Bitcoin insight -->
+          <div v-if="randomInsight" class="mt-4 pt-4 border-t border-border-dark">
             <div class="flex items-start">
               <div class="text-primary mr-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -396,8 +401,9 @@ onUnmounted(() => {
                 </svg>
               </div>
               <div>
-                <p class="text-sm text-text-light italic">{{ randomFact }}</p>
-                <span v-if="factCategory" class="text-xs text-text-muted">Category: {{ factCategory }}</span>
+                <p class="text-xs font-medium text-primary mb-1">{{ randomInsight.heading }}</p>
+                <p class="text-sm text-text-light italic">{{ randomInsight.insight }}</p>
+                <div class="text-xs text-text-muted mt-1 text-right">~ From satoshinotebook.com</div>
               </div>
             </div>
           </div>

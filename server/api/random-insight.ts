@@ -16,18 +16,18 @@ const insightsCache: any[] = [];
 async function loadInsights() {
   try {
     // Path to the JSON file (relative to the current file)
-    const jsonPath = path.resolve(__dirname, '../../../satoshinotebook.com/content.json');
-    
+    const jsonPath = path.resolve(__dirname, '../../satoshinotebook.com/content.json');
+
     // Read the file
     const fileContent = await fs.readFile(jsonPath, 'utf-8');
-    
+
     // Parse JSON
     const content = JSON.parse(fileContent);
-    
+
     if (content.data && Array.isArray(content.data)) {
       // Cache the insights
       insightsCache.splice(0, insightsCache.length, ...content.data);
-      
+
       console.log(`Loaded ${insightsCache.length} philosophical insights from JSON`);
     } else {
       console.error('Invalid JSON structure in content.json');
@@ -46,7 +46,7 @@ export default defineEventHandler(async () => {
     if (insightsCache.length === 0) {
       await loadInsights();
     }
-    
+
     // If still no insights, return error
     if (insightsCache.length === 0) {
       return {
@@ -54,11 +54,11 @@ export default defineEventHandler(async () => {
         message: 'No insights available'
       };
     }
-    
+
     // Get a random insight
     const randomIndex = Math.floor(Math.random() * insightsCache.length);
     const insight = insightsCache[randomIndex];
-    
+
     return {
       success: true,
       heading: insight.heading,
@@ -66,7 +66,7 @@ export default defineEventHandler(async () => {
     };
   } catch (error) {
     console.error('Error getting random insight:', error);
-    
+
     return {
       success: false,
       message: 'Failed to get random insight'
