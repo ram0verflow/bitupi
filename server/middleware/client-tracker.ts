@@ -2,13 +2,12 @@ import { defineEventHandler, getRequestHeader } from 'h3';
 import { registerClient, updateClientActivity } from '../utils/clientTracker';
 import crypto from 'crypto';
 
-// Cookie name for client tracking
-const CLIENT_ID_COOKIE = 'bitupi_client_id';
+// Cookie name for client tracking - use a session-only cookie instead of long-lived
+const CLIENT_ID_COOKIE = 'bitupi_session_id';
 
 export default defineEventHandler((event) => {
   // Get request cookies
   const cookies = parseCookies(getRequestHeader(event, 'cookie') || '');
-  const userAgent = getRequestHeader(event, 'user-agent') || '';
   
   // Get or create client ID
   let clientId = cookies[CLIENT_ID_COOKIE];
@@ -20,9 +19,11 @@ export default defineEventHandler((event) => {
     isNewClient = true;
     
     // Set cookie for client ID with security flags
+    // Make it a session cookie only (no Max-Age or Expires)
+    // This way it's deleted when the browser is closed
     const isSecure = process.env.NODE_ENV === 'production';
     event.node.res.setHeader('Set-Cookie', 
-      `${CLIENT_ID_COOKIE}=${clientId}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`);
+      `${CLIENT_ID_COOKIE}=${clientId}; Path=/; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`);
   }
   
   // Determine client type based on URL path
@@ -35,9 +36,9 @@ export default defineEventHandler((event) => {
     clientType = 'buyer';
   }
   
-  // Register or update client
+  // Register or update client - don't store user agent info anymore
   if (isNewClient) {
-    registerClient(clientId, clientType, userAgent);
+    registerClient(clientId, clientType);
   } else {
     updateClientActivity(clientId);
   }
