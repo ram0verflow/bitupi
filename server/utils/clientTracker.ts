@@ -6,7 +6,6 @@
 const activeClients = new Map<string, {
   lastSeen: number;
   type: 'earner' | 'buyer' | 'visitor';
-  browser: string;
 }>();
 
 // TTL for client activity in milliseconds (15 minutes)
@@ -16,29 +15,25 @@ const CLIENT_TTL = 15 * 60 * 1000;
  * Register a client as active
  * @param clientId - Unique identifier for the client
  * @param type - The type of client (earner, buyer, visitor)
- * @param userAgent - User agent string for browser identification
  */
-export function registerClient(clientId: string, type: 'earner' | 'buyer' | 'visitor', userAgent: string = '') {
-  // Extract browser information from user agent
-  const browser = getBrowserInfo(userAgent);
-  
+export function registerClient(clientId: string, type: 'earner' | 'buyer' | 'visitor') {
   // Check if client already exists
   const existingClient = activeClients.get(clientId);
   const isNewClient = !existingClient;
   const typeChanged = existingClient && existingClient.type !== type;
   
-  // Update the client record
+  // Update the client record - don't track browser info anymore
   activeClients.set(clientId, {
     lastSeen: Date.now(),
-    type,
-    browser
+    type
   });
   
-  // Log client activity for easier debugging
+  // Log client activity for easier debugging - sanitize the client ID by only showing prefix
+  const clientPrefix = clientId.substring(0, 8);
   if (isNewClient) {
-    console.log(`New client registered: ${clientId.substring(0, 8)}... as ${type} using ${browser}`);
+    console.log(`New client registered: ${clientPrefix}... as ${type}`);
   } else if (typeChanged) {
-    console.log(`Client ${clientId.substring(0, 8)}... changed type from ${existingClient.type} to ${type}`);
+    console.log(`Client ${clientPrefix}... changed type from ${existingClient.type} to ${type}`);
   }
 }
 
@@ -163,29 +158,7 @@ export function getActiveClientCounts() {
   };
 }
 
-/**
- * Extract browser info from user agent
- * @param userAgent - User agent string
- */
-function getBrowserInfo(userAgent: string): string {
-  if (!userAgent) return 'Unknown';
-  
-  const ua = userAgent.toLowerCase();
-  
-  if (ua.includes('firefox')) {
-    return 'Firefox';
-  } else if (ua.includes('chrome') && !ua.includes('edg') && !ua.includes('opr')) {
-    return 'Chrome';
-  } else if (ua.includes('safari') && !ua.includes('chrome')) {
-    return 'Safari';
-  } else if (ua.includes('edg')) {
-    return 'Edge';
-  } else if (ua.includes('opr') || ua.includes('opera')) {
-    return 'Opera';
-  } else {
-    return 'Other';
-  }
-}
+// Browser info extraction function removed to enhance privacy
 
 // Set up periodic cleanup
 let cleanupInterval: NodeJS.Timeout | null = null;
