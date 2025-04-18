@@ -1,6 +1,8 @@
 /**
- * Client tracker utility to keep track of active users
+ * Simplified client tracking and stats utility
  */
+import { store } from '../index';
+import crypto from 'crypto';
 
 // Track active users with a Map of client IDs to last activity timestamps
 const activeClients = new Map<string, {
@@ -10,6 +12,47 @@ const activeClients = new Map<string, {
 
 // TTL for client activity in milliseconds (15 minutes)
 const CLIENT_TTL = 15 * 60 * 1000;
+
+// Cookie name for client tracking - use a session-only cookie
+export const CLIENT_ID_COOKIE = 'bitupi_session_id';
+
+/**
+ * Generate a unique client ID
+ */
+export function generateClientId() {
+  return `client_${crypto.randomBytes(16).toString('hex')}`;
+}
+
+/**
+ * Helper function to parse cookies
+ */
+export function parseCookies(cookieHeader: string): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  
+  if (!cookieHeader) return cookies;
+  
+  try {
+    // RFC 6265 compliant cookie parsing
+    const cookiePairs = cookieHeader.split(/;\s*/);
+    
+    for (const cookiePair of cookiePairs) {
+      // Find the first equals sign (cookies might have = in the value)
+      const firstEquals = cookiePair.indexOf('=');
+      if (firstEquals <= 0) continue; // Skip invalid cookies
+      
+      const cookieName = decodeURIComponent(cookiePair.substring(0, firstEquals).trim());
+      const cookieValue = decodeURIComponent(cookiePair.substring(firstEquals + 1).trim());
+      
+      if (cookieName && cookieValue) {
+        cookies[cookieName] = cookieValue;
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing cookies:', error);
+  }
+  
+  return cookies;
+}
 
 /**
  * Register a client as active
@@ -22,11 +65,14 @@ export function registerClient(clientId: string, type: 'earner' | 'buyer' | 'vis
   const isNewClient = !existingClient;
   const typeChanged = existingClient && existingClient.type !== type;
   
-  // Update the client record - don't track browser info anymore
+  // Update the client record
   activeClients.set(clientId, {
     lastSeen: Date.now(),
     type
   });
+  
+  // Update store.activeUsers to keep stats in sync
+  updateActiveUserCounts();
   
   // Log client activity for easier debugging - sanitize the client ID by only showing prefix
   const clientPrefix = clientId.substring(0, 8);
@@ -68,6 +114,9 @@ export function updateClientType(clientId: string, type: 'earner' | 'buyer' | 'v
       // Log type change for easier debugging
       console.log(`Client ${clientId.substring(0, 8)}... changed type from ${oldType} to ${type}`);
       
+      // Update store.activeUsers to keep stats in sync
+      updateActiveUserCounts();
+      
       // If becoming an earner or leaving earner status, log it more prominently
       if (type === 'earner' || oldType === 'earner') {
         const counts = getActiveClientCounts();
@@ -87,6 +136,8 @@ export function updateClientType(clientId: string, type: 'earner' | 'buyer' | 'v
  */
 export function removeClient(clientId: string) {
   activeClients.delete(clientId);
+  // Update store.activeUsers to keep stats in sync
+  updateActiveUserCounts();
 }
 
 /**
@@ -106,8 +157,6 @@ export function cleanupExpiredClients(batchSize: number = 50): number {
   for (const clientId of clientIds) {
     // Check if we've processed enough for this batch
     if (processedCount >= batchSize) {
-      // Schedule the rest for next cycle
-      console.log(`Processed ${processedCount} clients, continuing in next cleanup cycle`);
       break;
     }
     
@@ -123,6 +172,8 @@ export function cleanupExpiredClients(batchSize: number = 50): number {
   
   if (removedCount > 0) {
     console.log(`Removed ${removedCount} expired clients`);
+    // Update active user counts after removing clients
+    updateActiveUserCounts();
   }
   
   return removedCount;
@@ -158,9 +209,82 @@ export function getActiveClientCounts() {
   };
 }
 
-// Browser info extraction function removed to enhance privacy
+/**
+ * Update store.activeUsers with the latest counts
+ */
+function updateActiveUserCounts() {
+  if (store && store.activeUsers) {
+    const counts = getActiveClientCounts();
+    store.activeUsers = counts;
+  }
+}
 
-// Set up periodic cleanup
+/**
+ * Calculate platform statistics including active users
+ */
+export function calculateStats() {
+  // Calculate total orders
+  const totalOrders = store.orders.size;
+  
+  // Calculate orders by status
+  let pendingOrders = 0;
+  let processingOrders = 0;
+  let completedOrders = 0;
+  let failedOrders = 0;
+  
+  // Calculate total volume
+  let totalVolumeInr = 0;
+  let totalVolumeSats = 0;
+  
+  // Loop through orders to calculate stats
+  for (const order of store.orders.values()) {
+    // Count by status
+    if (order.status === 'pending') pendingOrders++;
+    else if (order.status === 'processing' || order.status === 'verifying') processingOrders++;
+    else if (order.status === 'completed') {
+      completedOrders++;
+      totalVolumeInr += order.inrAmount;
+      totalVolumeSats += order.satAmount;
+    }
+    else if (order.status === 'failed') failedOrders++;
+  }
+  
+  // Get current exchange rate
+  const currentRate = store.exchangeRate.BTC_INR;
+  
+  // Get active user counts directly
+  const { earners, buyers, visitors, total } = getActiveClientCounts();
+  
+  // Calculate additional statistics
+  const averageOrderValueInr = completedOrders > 0 ? Math.round(totalVolumeInr / completedOrders) : 0;
+  const averageOrderValueSats = completedOrders > 0 ? Math.round(totalVolumeSats / completedOrders) : 0;
+  
+  return {
+    // Order stats
+    totalOrders,
+    pendingOrders,
+    processingOrders,
+    completedOrders,
+    failedOrders,
+    
+    // Volume stats
+    totalVolumeInr,
+    totalVolumeSats,
+    averageOrderValueInr,
+    averageOrderValueSats,
+    
+    // Rate stats
+    currentRate,
+    
+    // User activity stats
+    activeEarners: earners,
+    activeBuyers: buyers,
+    activeVisitors: visitors,
+    activeUsers: total
+  };
+}
+
+// Single cleanup interval for the entire system
 let cleanupInterval: NodeJS.Timeout | null = null;
 
 /**
@@ -172,21 +296,7 @@ export function startCleanupInterval() {
     console.log('Starting client tracking cleanup interval');
     // Run cleanup every 5 minutes
     cleanupInterval = setInterval(() => {
-      const removedCount = cleanupExpiredClients();
-      if (removedCount > 0) {
-        console.log(`Cleaned up ${removedCount} inactive clients`);
-      }
+      cleanupExpiredClients();
     }, 5 * 60 * 1000);
-  }
-}
-
-/**
- * Stop the cleanup interval (useful for graceful shutdown)
- */
-export function stopCleanupInterval() {
-  if (cleanupInterval) {
-    console.log('Stopping client tracking cleanup interval');
-    clearInterval(cleanupInterval);
-    cleanupInterval = null;
   }
 }

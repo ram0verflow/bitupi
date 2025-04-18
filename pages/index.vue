@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
 import StatsDisplay from '~/components/StatsDisplay.vue';
-import useUserStats from '~/composables/useUserStats';
+import usePlatformStats from '~/composables/usePlatformStats';
 
 const router = useRouter();
 const currentRate = ref(0);
@@ -12,8 +12,9 @@ const randomInsight = ref(null);
 const insightLoading = ref(false);
 const rateSource = ref('');
 const lastUpdated = ref('');
-const activeEarnerCount = ref(0);
-const activeSessionCount = ref(0);
+
+// Use the platform stats composable
+const { stats: platformStats } = usePlatformStats();
 
 // Function to navigate to send or receive pages
 function navigateTo(path) {
@@ -156,22 +157,13 @@ function setupRealTimeUpdates() {
         }
       });
       
-      // Listen for stats updates
-      $socket.on('stats', (data) => {
-        if (data) {
-          if (typeof data.activeEarners === 'number') {
-            activeEarnerCount.value = data.activeEarners;
-          }
-          if (typeof data.activeSessions === 'number') {
-            activeSessionCount.value = data.activeSessions;
-          }
-        }
-      });
+      // Stats are now managed by the usePlatformStats composable
+      // No need to manually update them here
       
       // Cleanup on component unmount
       onUnmounted(() => {
         $socket.off('exchange-rate');
-        $socket.off('stats');
+        // Stats listener is now managed by the usePlatformStats composable
       });
     } catch (error) {
       console.error('Failed to initialize real-time updates:', error);
@@ -421,11 +413,12 @@ onUnmounted(() => {
       <div class="container py-16">
         <div class="text-center mb-12">
           <h2 class="font-display text-3xl font-medium text-text-light mb-4">Platform Statistics</h2>
-          <p class="text-text-muted max-w-2xl mx-auto">Real-time data and your personal statistics</p>
+          <p class="text-text-muted max-w-2xl mx-auto">Real-time platform activity and exchange rates</p>
         </div>
         
         <div class="max-w-4xl mx-auto mb-8">
-          <div class="flex justify-center">
+          <!-- Only show earner information when there are active earners -->
+          <div class="flex justify-center" v-if="platformStats.activeEarners > 0">
             <div class="bg-secondary/10 border border-secondary/30 rounded-lg px-8 py-4 flex items-center space-x-4">
               <div class="text-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -434,19 +427,16 @@ onUnmounted(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="font-display text-xl font-medium text-text-light">Currently <span class="text-secondary">{{ activeEarnerCount }}</span> Earners Online</h3>
+                <h3 class="font-display text-xl font-medium text-text-light">Currently <span class="text-secondary">{{ platformStats.activeEarners }}</span> Earners Online</h3>
                 <p class="text-text-muted">Ready to process your UPI payments in real-time</p>
               </div>
             </div>
           </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div class="max-w-4xl mx-auto">
           <!-- Platform Stats -->
           <StatsDisplay view="platform" />
-          
-          <!-- User Stats -->
-          <StatsDisplay view="user" />
         </div>
       </div>
     </section>

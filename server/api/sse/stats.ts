@@ -1,7 +1,6 @@
 import { defineEventHandler, setHeader } from 'h3'
 import { store } from '../../index'
-import { getActiveClientCounts } from '../../utils/clientTracker'
-import { calculateStats } from '../../utils/stats'
+import { calculateStats } from '../../utils/clientTracker'
 
 export default defineEventHandler(async (event) => {
   // Set headers for SSE

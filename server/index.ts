@@ -1,6 +1,5 @@
 import { defineNitroPlugin } from 'nitropack/runtime/plugin'
-import { cleanupExpiredClients, getActiveClientCounts, startCleanupInterval } from './utils/clientTracker'
-import { calculateStats } from './utils/stats'
+import { cleanupExpiredClients, startCleanupInterval, calculateStats } from './utils/clientTracker'
 import { ServerResponse } from 'http'
 
 // Simple in-memory database for the app
@@ -225,27 +224,13 @@ export default defineNitroPlugin((nitroApp) => {
   // Start client tracking cleanup interval
   startCleanupInterval();
 
-  // Clean up expired clients every minute
+  // Update and broadcast stats every 10 seconds
   setInterval(() => {
-    // Remove expired clients
-    const removedCount = cleanupExpiredClients();
-    if (removedCount > 0) {
-      console.log(`Cleaned up ${removedCount} expired clients`);
-    }
-  }, 60000);
-  
-  // Update and broadcast stats more frequently (every 10 seconds)
-  setInterval(() => {
-    // Update active user counts
-    const counts = getActiveClientCounts();
-    store.activeUsers = counts;
-
     try {
-      // Get stats from the calculateStats function
-      // The function already includes active user counts from store.activeUsers
+      // Calculate stats - this will automatically update store.activeUsers
       const stats = calculateStats();
       
-      // Broadcast updated stats to all clients (send the stats directly for simpler client handling)
+      // Broadcast updated stats to all clients
       broadcastToSSEClients('stats', stats);
     } catch (error) {
       console.error('Error broadcasting stats:', error);

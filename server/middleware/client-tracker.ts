@@ -1,9 +1,11 @@
 import { defineEventHandler, getRequestHeader } from 'h3';
-import { registerClient, updateClientActivity } from '../utils/clientTracker';
-import crypto from 'crypto';
-
-// Cookie name for client tracking - use a session-only cookie instead of long-lived
-const CLIENT_ID_COOKIE = 'bitupi_session_id';
+import { 
+  registerClient, 
+  updateClientActivity, 
+  parseCookies, 
+  generateClientId, 
+  CLIENT_ID_COOKIE 
+} from '../utils/clientTracker';
 
 export default defineEventHandler((event) => {
   // Get request cookies
@@ -19,11 +21,12 @@ export default defineEventHandler((event) => {
     isNewClient = true;
     
     // Set cookie for client ID with security flags
-    // Make it a session cookie only (no Max-Age or Expires)
-    // This way it's deleted when the browser is closed
+    // Set it to expire in 24 hours instead of a session cookie
+    // This prevents new client IDs being created on page refresh
     const isSecure = process.env.NODE_ENV === 'production';
+    const MAX_AGE = 24 * 60 * 60; // 24 hours in seconds
     event.node.res.setHeader('Set-Cookie', 
-      `${CLIENT_ID_COOKIE}=${clientId}; Path=/; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`);
+      `${CLIENT_ID_COOKIE}=${clientId}; Path=/; Max-Age=${MAX_AGE}; HttpOnly; SameSite=Strict${isSecure ? '; Secure' : ''}`);
   }
   
   // Determine client type based on URL path
@@ -36,7 +39,7 @@ export default defineEventHandler((event) => {
     clientType = 'buyer';
   }
   
-  // Register or update client - don't store user agent info anymore
+  // Register or update client
   if (isNewClient) {
     registerClient(clientId, clientType);
   } else {
@@ -47,39 +50,3 @@ export default defineEventHandler((event) => {
   event.context.clientId = clientId;
   event.context.clientType = clientType;
 });
-
-// Helper function to parse cookies
-// This is a simplified version - in production, consider using a well-tested library like cookie-parser
-function parseCookies(cookieHeader: string): Record<string, string> {
-  const cookies: Record<string, string> = {};
-  
-  if (!cookieHeader) return cookies;
-  
-  try {
-    // RFC 6265 compliant cookie parsing
-    const cookiePairs = cookieHeader.split(/;\s*/);
-    
-    for (const cookiePair of cookiePairs) {
-      // Find the first equals sign (cookies might have = in the value)
-      const firstEquals = cookiePair.indexOf('=');
-      if (firstEquals <= 0) continue; // Skip invalid cookies
-      
-      const cookieName = decodeURIComponent(cookiePair.substring(0, firstEquals).trim());
-      const cookieValue = decodeURIComponent(cookiePair.substring(firstEquals + 1).trim());
-      
-      if (cookieName && cookieValue) {
-        cookies[cookieName] = cookieValue;
-      }
-    }
-  } catch (error) {
-    console.error('Error parsing cookies:', error);
-    // Return empty cookies object on error instead of failing
-  }
-  
-  return cookies;
-}
-
-// Generate a unique client ID
-function generateClientId() {
-  return `client_${crypto.randomBytes(16).toString('hex')}`;
-}

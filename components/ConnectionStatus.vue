@@ -13,17 +13,13 @@ const { $socket } = useNuxtApp();
 
 // Compute display for earner count badge
 const earnerBadgeText = computed(() => {
-  return activeEarners.value === 0 
-    ? 'No earners online' 
-    : activeEarners.value === 1
-      ? '1 earner online'
-      : `${activeEarners.value} earners online`;
+  return activeEarners.value === 1
+    ? '1 earner online'
+    : `${activeEarners.value} earners online`;
 });
 
-// Compute color class for earner badge
+// Only show positive badge with success color
 const earnerBadgeColor = computed(() => {
-  if (activeEarners.value === 0) return 'bg-error/20 text-error border-error/30';
-  if (activeEarners.value < 3) return 'bg-warning/20 text-warning border-warning/30';
   return 'bg-success/20 text-success border-success/30';
 });
 
@@ -86,8 +82,8 @@ function toggleEarnerBadge() {
 
 <template>
   <div>
-    <!-- Earner count badge - fixed at the top -->
-    <div v-if="showEarnerBadge && status === 'connected'" 
+    <!-- Earner count badge - only shown when earners are online -->
+    <div v-if="showEarnerBadge && status === 'connected' && activeEarners > 0" 
          class="fixed top-20 right-4 z-50 py-2 px-4 rounded-lg shadow-md border animate-fadeIn animate-pulse-subtle transition-all"
          :class="earnerBadgeColor">
       <div class="flex items-center space-x-2">
@@ -137,10 +133,10 @@ function toggleEarnerBadge() {
             <p class="text-sm text-text-light">{{ statusMessage }}</p>
           </div>
           
-          <!-- Add active earners info to the connection popup -->
-          <div v-if="status === 'connected'" class="mt-3 pt-3 border-t border-border-dark">
+          <!-- Add active earners info to the connection popup, only when there are earners -->
+          <div v-if="status === 'connected' && activeEarners > 0" class="mt-3 pt-3 border-t border-border-dark">
             <div class="flex items-center space-x-2">
-              <div :class="earnerBadgeColor.split(' ')[1]">
+              <div class="text-success">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                     d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
