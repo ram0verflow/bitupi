@@ -1,5 +1,7 @@
 import { defineEventHandler, setHeader } from 'h3'
 import { store } from '../../index'
+import { getActiveClientCounts } from '../../utils/clientTracker'
+import { calculateStats } from '../../utils/stats'
 
 export default defineEventHandler(async (event) => {
   // Set headers for SSE
@@ -9,59 +11,26 @@ export default defineEventHandler(async (event) => {
   
   const response = event.node.res
   
-  // Calculate initial stats
-  let pendingCount = 0
-  let processingCount = 0
-  let completedCount = 0
-  let failedCount = 0
+  // Add this client to the stats SSE clients set
+  store.sseClients.stats.add(response)
   
-  store.orders.forEach(order => {
-    if (order.status === 'pending') pendingCount++
-    else if (order.status === 'processing' || order.status === 'verifying') processingCount++
-    else if (order.status === 'completed') completedCount++
-    else if (order.status === 'failed') failedCount++
-  })
+  // Get stats from the utility function to ensure consistency
+  const stats = calculateStats()
   
-  // Send initial stats
-  response.write(`data: ${JSON.stringify({
-    timestamp: new Date().toISOString(),
-    activeSessions: store.sseClients.exchangeRate.size + store.sseClients.orders.size,
-    pendingOrders: pendingCount,
-    processingOrders: processingCount,
-    completedOrders: completedCount,
-    failedOrders: failedCount,
-    totalOrders: store.orders.size,
-    uptime: process.uptime().toFixed(2) + 's',
-    currentRate: store.exchangeRate.BTC_INR
-  })}\n\n`)
+  try {
+    // Send initial stats
+    response.write(`data: ${JSON.stringify(stats)}\n\n`);
+  } catch (error) {
+    console.error('Error sending initial stats SSE:', error);
+  }
   
   // Send updated stats every 5 seconds
   const interval = setInterval(() => {
-    // Recalculate stats
-    let pendingCount = 0
-    let processingCount = 0
-    let completedCount = 0
-    let failedCount = 0
-    
-    store.orders.forEach(order => {
-      if (order.status === 'pending') pendingCount++
-      else if (order.status === 'processing' || order.status === 'verifying') processingCount++
-      else if (order.status === 'completed') completedCount++
-      else if (order.status === 'failed') failedCount++
-    })
+    // Get updated stats from the utility function
+    const updatedStats = calculateStats()
     
     try {
-      response.write(`data: ${JSON.stringify({
-        timestamp: new Date().toISOString(),
-        activeSessions: store.sseClients.exchangeRate.size + store.sseClients.orders.size,
-        pendingOrders: pendingCount,
-        processingOrders: processingCount,
-        completedOrders: completedCount,
-        failedOrders: failedCount,
-        totalOrders: store.orders.size,
-        uptime: process.uptime().toFixed(2) + 's',
-        currentRate: store.exchangeRate.BTC_INR
-      })}\n\n`)
+      response.write(`data: ${JSON.stringify(updatedStats)}\n\n`)
     } catch (e) {
       console.error('Error sending stats SSE:', e)
       clearInterval(interval)
@@ -71,5 +40,8 @@ export default defineEventHandler(async (event) => {
   // Clean up on disconnect
   response.on('close', () => {
     clearInterval(interval)
+    
+    // Remove this client from the stats SSE clients set
+    store.sseClients.stats.delete(response)
   })
 })

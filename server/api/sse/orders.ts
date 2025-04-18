@@ -1,5 +1,6 @@
 import { defineEventHandler, setHeader } from 'h3'
 import { store } from '../../index'
+import { sanitizeOrdersList } from '../../utils/orderUtils'
 
 export default defineEventHandler(async (event) => {
   // Set headers for SSE
@@ -13,9 +14,12 @@ export default defineEventHandler(async (event) => {
   const activeOrders = Array.from(store.orders.values())
     .filter(order => order.status === 'pending')
   
+  // Sanitize order data before sending
+  const sanitizedOrders = sanitizeOrdersList(activeOrders)
+  
   response.write(`data: ${JSON.stringify({
     action: 'init',
-    orders: activeOrders
+    orders: sanitizedOrders
   })}\n\n`)
   
   // Add this client to the orders SSE clients
