@@ -4,8 +4,11 @@ import { defineNuxtPlugin } from '#app'
  * Plugin to manage SSE connections for real-time updates
  */
 export default defineNuxtPlugin((nuxtApp) => {
+  // Define EventSource map type
+  type SSEConnectionMap = Map<string, EventSource>
+  
   // Store SSE connections
-  const sseConnections = new Map()
+  const sseConnections: SSEConnectionMap = new Map()
   
   // Connect to exchange rate updates
   const setupExchangeRateSSE = () => {
@@ -26,20 +29,45 @@ export default defineNuxtPlugin((nuxtApp) => {
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
+          // Track the real-time rate source
+          if (data.source) {
+            console.log(`Exchange rate updated from ${data.source}`)
+          }
           nuxtApp.hook('sse:exchange-rate', data)
         } catch (error) {
           console.error('Error parsing exchange rate SSE data:', error)
         }
       }
       
+      // Implement exponential backoff for reconnection
+      let reconnectAttempt = 0;
+      const maxReconnectAttempts = 10;
+      
       eventSource.onerror = (error) => {
-        console.error('Exchange rate SSE error:', error)
-        // Try to reconnect after a delay
+        console.error('Exchange rate SSE error:', error);
+        
+        // Stop if we've reached max attempts
+        if (reconnectAttempt >= maxReconnectAttempts) {
+          console.error(`Giving up after ${maxReconnectAttempts} reconnection attempts`);
+          return;
+        }
+        
+        // Calculate exponential backoff time with jitter
+        const baseDelay = 1000; // 1 second
+        const maxDelay = 30000; // 30 seconds
+        const exponentialDelay = Math.min(maxDelay, baseDelay * Math.pow(2, reconnectAttempt));
+        const jitter = Math.random() * 0.5 + 0.5; // 0.5-1.5 multiplier
+        const delay = Math.floor(exponentialDelay * jitter);
+        
+        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempt + 1}/${maxReconnectAttempts})`);
+        
+        // Try to reconnect after calculated delay
         setTimeout(() => {
           if (sseConnections.has('exchange-rate')) {
-            setupExchangeRateSSE()
+            reconnectAttempt++;
+            setupExchangeRateSSE();
           }
-        }, 3000)
+        }, delay);
       }
       
       sseConnections.set('exchange-rate', eventSource)
@@ -194,22 +222,25 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   }
   
+  // Define callback type
+  type EventCallback = (data: unknown) => void;
+  
   // Register event listener
-  const on = (event: string, callback: Function) => {
-    nuxtApp.hook(`sse:${event}`, callback)
+  const on = (event: string, callback: EventCallback): void => {
+    nuxtApp.hook(`sse:${event}`, callback);
   }
   
   // Remove event listener
-  const off = (event: string, callback?: Function) => {
+  const off = (event: string, callback?: EventCallback): void => {
     if (callback) {
       // Remove specific callback
-      const hookName = `sse:${event}`
+      const hookName = `sse:${event}`;
       if (nuxtApp.hooks[hookName]) {
-        nuxtApp.hooks[hookName] = nuxtApp.hooks[hookName].filter(hook => hook !== callback)
+        nuxtApp.hooks[hookName] = nuxtApp.hooks[hookName].filter(hook => hook !== callback);
       }
     } else {
       // Remove all callbacks for this event
-      delete nuxtApp.hooks[`sse:${event}`]
+      delete nuxtApp.hooks[`sse:${event}`];
     }
   }
   
@@ -239,6 +270,82 @@ export default defineNuxtPlugin((nuxtApp) => {
     })
   }
   
+  // Create reactive stats object - use a plain object for simplicity
+  // We'll avoid functions or complex objects that might cause serialization issues
+  const stats = {
+    activeEarners: 0,
+    activeBuyers: 0,
+    activeVisitors: 0,
+    activeUsers: 0,
+    pendingOrders: 0,
+    processingOrders: 0,
+    completedOrders: 0,
+    failedOrders: 0,
+    totalOrders: 0
+  }
+  
+  // Define stats data type
+  interface StatsData {
+    activeEarners?: number;
+    activeBuyers?: number;
+    activeVisitors?: number;
+    activeUsers?: number;
+    pendingOrders?: number;
+    processingOrders?: number;
+    completedOrders?: number;
+    failedOrders?: number;
+    totalOrders?: number;
+    [key: string]: any; // Allow other properties but we only use the ones we define
+  }
+  
+  // Create a simple update function to handle stats updates
+  function updateStats(data: StatsData): void {
+    if (!data) return;
+    
+    // Only update properties that exist in our stats object
+    if (typeof data.activeEarners === 'number') stats.activeEarners = data.activeEarners;
+    if (typeof data.activeBuyers === 'number') stats.activeBuyers = data.activeBuyers;
+    if (typeof data.activeVisitors === 'number') stats.activeVisitors = data.activeVisitors;
+    if (typeof data.activeUsers === 'number') stats.activeUsers = data.activeUsers;
+    if (typeof data.pendingOrders === 'number') stats.pendingOrders = data.pendingOrders;
+    if (typeof data.processingOrders === 'number') stats.processingOrders = data.processingOrders;
+    if (typeof data.completedOrders === 'number') stats.completedOrders = data.completedOrders;
+    if (typeof data.failedOrders === 'number') stats.failedOrders = data.failedOrders;
+    if (typeof data.totalOrders === 'number') stats.totalOrders = data.totalOrders;
+  }
+  
+  // Listen for stats updates (make sure to only pass serializable data)
+  nuxtApp.hook('sse:stats', (data: unknown) => {
+    if (!data || typeof data !== 'object') return;
+    
+    // Make a safe copy with only primitive values
+    const safeData: StatsData = {};
+    
+    // Handle both formats:
+    // 1. Direct stats object
+    // 2. Nested { success, stats } object
+    const statsObject = 'stats' in (data as any) ? (data as any).stats : data;
+    
+    // Only include serializable properties
+    if (statsObject && typeof statsObject === 'object') {
+      Object.entries(statsObject as Record<string, unknown>).forEach(([key, value]) => {
+        // Only include primitive values (string, number, boolean, null)
+        if (value === null || 
+            typeof value === 'string' || 
+            typeof value === 'number' || 
+            typeof value === 'boolean') {
+          safeData[key] = value;
+        }
+      });
+    }
+    
+    // Update stats with the safe data
+    updateStats(safeData);
+    
+    // Also emit the stats event with the safe data
+    nuxtApp.hook('sse:stats-updated', safeData);
+  })
+  
   // Provide functions to components
   return {
     provide: {
@@ -252,7 +359,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         on,
         off,
         isConnected,
-        getTransport: () => 'sse'
+        getTransport: () => 'sse',
+        stats // Export the stats object directly
       }
     }
   }

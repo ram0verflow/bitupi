@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import OrderCard from '~/components/OrderCard.vue';
 import ReceiptUploader from '~/components/ReceiptUploader.vue';
+import LightningTester from '~/components/LightningTester.vue';
+import useUserStats from '~/composables/useUserStats';
 
 // State variables
 const step = ref(1); // 1: Marketplace, 2: Payment, 3: Complete
@@ -14,6 +16,13 @@ const errorMessage = ref('');
 const eventSource = ref(null);
 const isLoading = ref(true);
 const orderStatus = ref('pending');
+const showTestTools = ref(false); // Toggle for test tools
+const trackingToken = ref(''); // Order tracking token
+const earnerKey = ref(''); // Earner authentication key
+const activeEarnerCount = ref(0); // Number of active earners
+
+// Get user stats utility
+const { recordReceive, updateTransactionStatus } = useUserStats();
 
 // Filtered active orders
 const activeOrders = computed(() => {
@@ -56,6 +65,9 @@ function setupOrderUpdates() {
       // Subscribe to orders updates
       $socket.subscribeToOrders();
       
+      // Subscribe to stats updates for active earner count
+      $socket.subscribeToStats();
+      
       // Listen for orders updates
       $socket.on('orders', (data) => {
         if (data.action === 'init') {
@@ -82,8 +94,15 @@ function setupOrderUpdates() {
           }
         }
       });
+      
+      // Listen for stats updates to get active earner count
+      $socket.on('stats', (data) => {
+        if (data && typeof data.activeEarners === 'number') {
+          activeEarnerCount.value = data.activeEarners;
+        }
+      });
     } catch (error) {
-      console.error('Failed to initialize orders updates:', error);
+      console.error('Failed to initialize real-time updates:', error);
     }
   }
 }
@@ -111,6 +130,25 @@ async function claimOrder(order) {
       selectedOrder.value = order;
       orderStatus.value = 'processing';
       step.value = 2; // Move to payment step
+      
+      // Store tracking token and earner key
+      if (data.trackingToken) {
+        trackingToken.value = data.trackingToken;
+        localStorage.setItem('bitupi_tracking_token', data.trackingToken);
+      }
+      
+      if (data.earnerKey) {
+        earnerKey.value = data.earnerKey;
+        localStorage.setItem('bitupi_earner_key', data.earnerKey);
+      }
+      
+      // Calculate earner's reward (1% of the order's sat amount)
+      const exchangeFeePercent = 0.02; // 2%
+      const earnerSharePercent = 0.5; // 50% of the fee
+      const reward = Math.ceil(order.satAmount * exchangeFeePercent * earnerSharePercent);
+      
+      // Record the receive transaction (not completed yet)
+      recordReceive(order.inrAmount, order.satAmount, reward, false);
       
       // Setup specific order updates
       setupSpecificOrderUpdates(order.id);
@@ -140,6 +178,14 @@ function setupSpecificOrderUpdates(id) {
           
           if (data.status === 'completed') {
             step.value = 3; // Move to complete step
+            
+            // Calculate earner's reward (1% of the order's sat amount)
+            const exchangeFeePercent = 0.02; // 2%
+            const earnerSharePercent = 0.5; // 50% of the fee
+            const reward = Math.ceil(selectedOrder.value.satAmount * exchangeFeePercent * earnerSharePercent);
+            
+            // Update transaction as completed in user stats
+            updateTransactionStatus(false, true, selectedOrder.value.inrAmount, selectedOrder.value.satAmount, reward);
           }
         }
       });
@@ -161,6 +207,16 @@ async function submitReceipt() {
     return;
   }
   
+  if (!lightningAddress.value) {
+    errorMessage.value = 'Please enter your Lightning address to receive payment';
+    return;
+  }
+  
+  if (!earnerKey.value) {
+    errorMessage.value = 'Authentication key is missing. Please try claiming the order again.';
+    return;
+  }
+  
   isSubmitting.value = true;
   errorMessage.value = '';
   
@@ -172,7 +228,8 @@ async function submitReceipt() {
       },
       body: JSON.stringify({
         receiptImage: receipt.value.image,
-        lightningAddress: lightningAddress.value
+        lightningAddress: lightningAddress.value,
+        earnerKey: earnerKey.value  // Include earner authentication key
       })
     });
     
@@ -221,22 +278,92 @@ function resetProcess() {
   lightningAddress.value = '';
   errorMessage.value = '';
   
+  // Clear tracking information if we've completed the order
+  if (orderStatus.value === 'completed') {
+    trackingToken.value = '';
+    earnerKey.value = '';
+    localStorage.removeItem('bitupi_tracking_token');
+    localStorage.removeItem('bitupi_earner_key');
+  }
+  
+  // Reset status
+  orderStatus.value = 'pending';
+  
   // Set up marketplace updates again
   setupOrderUpdates();
   fetchOrders();
+}
+
+// Ping server to update earner status
+async function pingAsEarner() {
+  try {
+    await fetch('/api/ping?type=earner');
+  } catch (error) {
+    console.error('Failed to ping server:', error);
+  }
+}
+
+// Start periodic pinging
+let pingInterval = null;
+let visibilityHandler = null;
+
+function startEarnerPing() {
+  // Ping immediately
+  pingAsEarner();
+  
+  // Set up more frequent pinging to ensure accurate earner counts
+  // Ping every 30 seconds while on the receive page
+  pingInterval = setInterval(pingAsEarner, 30 * 1000);
+  
+  // Additionally set up a visibility change event listener to ping
+  // when the user returns to the page after having it in the background
+  if (typeof document !== 'undefined') {
+    visibilityHandler = () => {
+      if (document.visibilityState === 'visible') {
+        pingAsEarner();
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+  }
 }
 
 // Lifecycle hooks
 onMounted(() => {
   fetchOrders();
   setupOrderUpdates();
+  
+  // Load stored keys if available
+  const storedToken = localStorage.getItem('bitupi_tracking_token');
+  if (storedToken) {
+    trackingToken.value = storedToken;
+  }
+  
+  const storedEarnerKey = localStorage.getItem('bitupi_earner_key');
+  if (storedEarnerKey) {
+    earnerKey.value = storedEarnerKey;
+  }
+  
+  // Register as earner and start periodic pinging
+  startEarnerPing();
 });
 
+// Clean up ping interval on unmount
 onUnmounted(() => {
   const { $socket } = useNuxtApp();
+
+  // Clean up ping interval
+  if (pingInterval) {
+    clearInterval(pingInterval);
+  }
   
-  // Clean up orders event listener
+  // Clean up visibility change event listener
+  if (typeof document !== 'undefined' && visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler);
+  }
+  
+  // Clean up event listeners
   $socket.off('orders');
+  $socket.off('stats');
   
   // Leave order room if we were in one
   if (selectedOrder.value) {
@@ -247,6 +374,15 @@ onUnmounted(() => {
   // Cleanup any remaining SSE connection
   if (eventSource.value && eventSource.value !== null) {
     eventSource.value.close();
+  }
+  
+  // Notify server we're no longer an earner when leaving the page
+  if (process.client) {
+    try {
+      fetch('/api/ping?type=visitor');
+    } catch (error) {
+      console.error('Failed to ping as visitor on unmount:', error);
+    }
   }
 });
 </script>
@@ -266,6 +402,25 @@ onUnmounted(() => {
           Browse available orders, make UPI payments, and earn bitcoin in return. 
           Orders are claimed on a first-come, first-served basis.
         </p>
+        <p class="text-secondary mt-2 max-w-2xl mx-auto">
+          <span class="font-medium">Earn 50% of the exchange fee</span> on every order you process!
+        </p>
+        
+        <!-- Active Earners Display -->
+        <div class="mt-6 inline-flex bg-secondary/10 border border-secondary/30 rounded-lg px-6 py-3 items-center">
+          <div class="flex items-center">
+            <span class="mr-3 text-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </span>
+            <div class="text-left">
+              <p class="text-text-muted text-sm">Currently Online</p>
+              <p class="text-secondary font-medium">{{ activeEarnerCount }} Earners</p>
+            </div>
+          </div>
+        </div>
       </div>
       
       <div class="bg-secondary/10 border border-secondary/30 rounded-lg p-4 mb-8 max-w-4xl mx-auto">
@@ -276,6 +431,27 @@ onUnmounted(() => {
           <li>Upload a screenshot/receipt of your payment</li>
           <li>Once the buyer confirms receipt, you'll receive the bitcoin payment</li>
         </ol>
+        
+        <!-- Test Tools Toggle -->
+        <div class="mt-4 pt-4 border-t border-secondary/30 text-right">
+          <button 
+            @click="showTestTools = !showTestTools" 
+            class="text-sm text-secondary underline"
+          >
+            {{ showTestTools ? 'Hide Testing Tools' : 'Show Testing Tools' }}
+          </button>
+        </div>
+        
+        <!-- Lightning Test Tools -->
+        <div v-if="showTestTools" class="mt-4">
+          <div class="bg-bg-input p-4 rounded-lg">
+            <h3 class="font-medium text-text-light mb-4">Lightning Payment Testing</h3>
+            <p class="text-text-muted mb-4">
+              Use this tool to test Lightning invoice generation and payments for development purposes.
+            </p>
+            <LightningTester :initialAmount="50000" />
+          </div>
+        </div>
       </div>
       
       <div class="max-w-4xl mx-auto">
@@ -377,16 +553,50 @@ onUnmounted(() => {
         />
         
         <div class="mt-6" v-if="receipt">
+          <div class="bg-warning/5 border border-warning/30 rounded-lg p-4 mb-4">
+            <div class="flex items-start">
+              <div class="text-warning mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-medium text-warning mb-1">Important</h4>
+                <p class="text-text-muted text-sm">
+                  Make sure to enter a valid Lightning address. This will be used to send your Bitcoin payment.
+                  Double-check that your address is correct - you won't be able to change it later!
+                </p>
+              </div>
+            </div>
+          </div>
+          
           <label class="block mb-2 text-text-light font-medium">
-            Your Lightning Address (to receive sats)
+            <span class="text-warning">*</span> Your Lightning Address (to receive sats)
           </label>
           <input 
             v-model="lightningAddress"
             type="text"
             class="input"
             placeholder="your@lightning.address"
+            required
           />
-          <p class="text-text-muted text-sm mt-2">If you don't have a Lightning address, you can use a LNURL or Invoice in this field.</p>
+          <div class="flex flex-wrap gap-2 mt-2">
+            <p class="text-text-muted text-sm">You can use:</p>
+            <span class="px-2 py-0.5 bg-secondary/10 text-secondary rounded-full text-xs">Lightning Address</span>
+            <span class="px-2 py-0.5 bg-secondary/10 text-secondary rounded-full text-xs">LNURL</span>
+            <span class="px-2 py-0.5 bg-secondary/10 text-secondary rounded-full text-xs">Lightning Invoice</span>
+          </div>
+          
+          <div class="bg-info/10 border border-info/30 rounded-lg p-4 mt-4">
+            <p class="text-text-muted mb-2">
+              We've created a secure tracking page for this order. You can access it anytime:
+            </p>
+            <div class="flex">
+              <NuxtLink to="/track" class="btn-outline-primary text-sm">
+                Track Your Order
+              </NuxtLink>
+            </div>
+          </div>
         </div>
         
         <div class="flex justify-between mt-6">
