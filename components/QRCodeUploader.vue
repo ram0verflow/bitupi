@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted, nextTick } from 'vue';
 
 const props = defineProps({
   maxSize: {
@@ -17,6 +17,10 @@ const errorMessage = ref('');
 const progress = ref(0);
 const dragActive = ref(false);
 const detectedUpiInfo = ref(null);
+const showCamera = ref(false);
+const videoStream = ref(null);
+const videoElement = ref(null);
+const captureMode = ref('upload'); // 'upload' or 'camera'
 
 const isValidFile = computed(() => {
   if (!selectedFile.value) return false;
@@ -214,6 +218,142 @@ function handleDrop(e) {
   dragActive.value = false;
   handleFileSelect(e);
 }
+
+// Camera handling functions
+async function startCamera() {
+  captureMode.value = 'camera';
+  showCamera.value = true;
+  errorMessage.value = '';
+  
+  try {
+    // First check if the browser supports getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Your browser does not support camera access');
+    }
+    
+    // Check for permissions if available
+    let permissionStatus;
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        permissionStatus = await navigator.permissions.query({ name: 'camera' });
+        if (permissionStatus.state === 'denied') {
+          throw new Error('Camera permission denied. Please enable camera access in your browser settings.');
+        }
+      }
+    } catch (permError) {
+      console.log('Permission query not supported, will try direct access:', permError);
+    }
+    
+    // Request camera access with higher resolution
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        facingMode: { ideal: 'environment' }, // Prefer back camera with fallback
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    });
+    
+    videoStream.value = stream;
+    
+    // Wait for nextTick and use a timeout as backup
+    await nextTick();
+    setTimeout(() => {
+      if (videoElement.value) {
+        videoElement.value.srcObject = stream;
+        
+        // Make sure video is actually playing
+        const playPromise = videoElement.value.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error('Error playing video:', error);
+            errorMessage.value = 'Could not start video stream. Please try again.';
+          });
+        }
+      }
+    }, 100);
+  } catch (error) {
+    console.error('Error accessing camera:', error);
+    
+    // Provide more specific error messages based on the error
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      errorMessage.value = 'Camera access denied. Please allow camera access in your browser settings.';
+    } else if (error.name === 'NotFoundError') {
+      errorMessage.value = 'No camera found. Please connect a camera or try uploading an image instead.';
+    } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+      errorMessage.value = 'Camera is in use by another application or not available.';
+    } else {
+      errorMessage.value = `Could not access camera: ${error.message || 'Unknown error'}. Try uploading instead.`;
+    }
+    
+    // Fall back to upload mode
+    showCamera.value = false;
+    captureMode.value = 'upload';
+  }
+}
+
+function stopCamera() {
+  if (videoStream.value) {
+    const tracks = videoStream.value.getTracks();
+    tracks.forEach(track => track.stop());
+    videoStream.value = null;
+  }
+  
+  showCamera.value = false;
+  captureMode.value = 'upload';
+}
+
+async function captureImage() {
+  if (!videoElement.value || !showCamera.value) return;
+  
+  try {
+    // Create a canvas with the same dimensions as the video
+    const canvas = document.createElement('canvas');
+    const videoWidth = videoElement.value.videoWidth;
+    const videoHeight = videoElement.value.videoHeight;
+    
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    
+    // Draw the current video frame to the canvas
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoElement.value, 0, 0, videoWidth, videoHeight);
+    
+    // Convert to blob and create a File object
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    
+    // Convert base64 to blob
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    
+    // Create a file from the blob
+    const capturedFile = new File([blob], "camera-capture.jpg", { type: 'image/jpeg' });
+    
+    // Set as the selected file and create preview
+    selectedFile.value = capturedFile;
+    previewUrl.value = dataUrl;
+    
+    // Stop the camera after capturing
+    stopCamera();
+    
+  } catch (error) {
+    console.error('Error capturing image:', error);
+    errorMessage.value = 'Failed to capture image from camera';
+  }
+}
+
+function switchMode(mode) {
+  if (mode === 'camera') {
+    startCamera();
+  } else {
+    stopCamera();
+    captureMode.value = 'upload';
+  }
+}
+
+// Cleanup on component unmount
+onUnmounted(() => {
+  stopCamera();
+});
 </script>
 
 <template>
@@ -294,6 +434,36 @@ function handleDrop(e) {
       </div>
     </div>
     
+    <!-- Camera view when camera is active -->
+    <div v-else-if="showCamera" class="border-2 border-border-dark rounded-lg overflow-hidden">
+      <div class="relative">
+        <!-- Camera video feed -->
+        <video
+          ref="videoElement"
+          autoplay
+          playsinline
+          class="w-full h-auto aspect-video bg-black object-cover"
+        ></video>
+        
+        <!-- Camera controls -->
+        <div class="absolute inset-x-0 bottom-0 bg-bg-dark/80 p-4 flex justify-between">
+          <button 
+            @click="stopCamera"
+            class="btn-outline-error text-sm"
+          >
+            Cancel
+          </button>
+          
+          <button 
+            @click="captureImage"
+            class="btn-primary text-sm"
+          >
+            Capture QR Code
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <!-- Upload zone if no file is selected -->
     <div 
       v-else
@@ -314,18 +484,39 @@ function handleDrop(e) {
         <div>
           <h3 class="font-display text-text-light font-medium mb-1">Upload UPI QR Code</h3>
           <p class="text-text-muted text-sm mb-4">
-            Drag and drop or click to select
+            Select a method to continue
           </p>
           
-          <label class="btn-outline-primary cursor-pointer">
-            <span>Select Image</span>
-            <input 
-              type="file" 
-              class="hidden" 
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              @change="handleFileSelect"
-            />
-          </label>
+          <!-- Upload options -->
+          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              @click="switchMode('camera')"
+              class="btn-secondary"
+            >
+              <span class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Use Camera
+              </span>
+            </button>
+            
+            <label class="btn-outline-primary cursor-pointer">
+              <span class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload Image
+              </span>
+              <input 
+                type="file" 
+                class="hidden" 
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                @change="handleFileSelect"
+              />
+            </label>
+          </div>
         </div>
         
         <p class="text-text-muted text-xs">

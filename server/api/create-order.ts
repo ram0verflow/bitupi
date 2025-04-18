@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody } from 'h3'
 import { store, broadcastToSSEClients, Order } from '../index'
 import crypto from 'crypto'
+import { generateSecurityKeys, generateRefundKey, generateTrackingToken } from '../utils/security'
 
 // Generate a random order ID
 function generateOrderId() {
@@ -16,7 +17,7 @@ function generateLightningInvoice(satAmount: number) {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { inrAmount, upiId, satAmount, upiName, orderType } = body
+    const { inrAmount, upiId, satAmount, upiName, orderType, refundWallet } = body
     
     // Validate inputs
     if (!inrAmount || isNaN(parseFloat(inrAmount))) {
@@ -44,6 +45,12 @@ export default defineEventHandler(async (event) => {
     // Generate a Lightning invoice for testing
     const lightningInvoice = generateLightningInvoice(finalSatAmount)
     
+    // Generate security keys for multi-signature authentication
+    const securityKeys = generateSecurityKeys()
+    
+    // Generate refund information
+    const refundKey = generateRefundKey()
+    
     // Create the order
     const order: Order = {
       id: orderId,
@@ -57,6 +64,17 @@ export default defineEventHandler(async (event) => {
       lightning: {
         invoice: lightningInvoice,
         paid: false
+      },
+      // Add security keys
+      securityKeys: {
+        buyerKey: securityKeys.buyerKey,
+        systemKey: securityKeys.systemKey,
+        sharedSecret: securityKeys.sharedSecret
+      },
+      // Add refund information if provided
+      refund: {
+        walletAddress: refundWallet || '', // Optional refund wallet
+        refundKey: refundKey
       }
     }
     
@@ -66,14 +84,33 @@ export default defineEventHandler(async (event) => {
     // Broadcast to all clients listening to orders
     broadcastToSSEClients('orders', {
       action: 'add',
-      order
+      // Filter out sensitive information from broadcast
+      order: {
+        ...order,
+        securityKeys: undefined, // Don't broadcast security keys
+        refund: undefined // Don't broadcast refund information
+      }
     })
+    
+    // Generate a tracking token for the buyer
+    const trackingToken = generateTrackingToken(orderId, 'buyer', securityKeys.buyerKey)
     
     return {
       success: true,
       id: orderId,
       invoice: lightningInvoice,
-      order
+      // Return security information to the buyer
+      trackingToken,
+      buyerKey: securityKeys.buyerKey,
+      refundKey,
+      // Return a filtered version of the order
+      order: {
+        ...order,
+        securityKeys: undefined, // Don't return complete security keys
+        refund: {
+          walletAddress: order.refund?.walletAddress
+        }
+      }
     }
   } catch (error) {
     console.error('Create order error:', error)

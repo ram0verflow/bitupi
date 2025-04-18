@@ -40,6 +40,22 @@ const formattedSats = computed(() => {
   }).format(props.order.satAmount);
 });
 
+// Calculate the earner's reward (50% of exchange fee which is 2%)
+const earnerReward = computed(() => {
+  if (props.type !== 'earn') return null;
+  
+  // Exchange fee is 2%, earner gets 50% of that = 1% of total
+  const exchangeFeePercent = 0.02;
+  const earnerSharePercent = 0.5;
+  
+  // Calculate earner reward in sats (1% of the order amount)
+  const earnerRewardAmount = Math.ceil(props.order.satAmount * exchangeFeePercent * earnerSharePercent);
+  
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0
+  }).format(earnerRewardAmount);
+});
+
 const statusClass = computed(() => {
   const statusMap = {
     'pending': 'bg-warning/20 text-warning border-warning/30',
@@ -136,8 +152,13 @@ const timeRemaining = computed(() => {
           Expires in: <span :class="{'text-warning': timeRemaining && parseInt(timeRemaining) < 5}">{{ timeRemaining }}</span>
         </span>
       </div>
-      <div class="text-primary text-sm">
-        {{ formattedSats }} sats
+      <div class="flex justify-between items-center">
+        <div class="text-primary text-sm">
+          {{ formattedSats }} sats
+        </div>
+        <div v-if="type === 'earn' && earnerReward" class="text-xs bg-success/10 text-success px-2 py-1 rounded">
+          <span class="font-medium">You earn:</span> {{ earnerReward }} sats
+        </div>
       </div>
     </div>
     

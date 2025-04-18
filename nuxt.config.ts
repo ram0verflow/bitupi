@@ -43,7 +43,8 @@ export default defineNuxtConfig({
 
   // Server side
   nitro: {
-    plugins: ['~/server/index.ts']
+    plugins: ['~/server/index.ts'],
+    middleware: ['~/server/middleware/route-middleware']
   },
 
   // API routes
@@ -83,6 +84,10 @@ export default defineNuxtConfig({
     {
       route: '/api/random-insight',
       handler: '~/server/api/random-insight.ts'
+    },
+    {
+      route: '/api/ping',
+      handler: '~/server/api/ping.ts'
     },
     {
       route: '/api/sse/exchange-rate',

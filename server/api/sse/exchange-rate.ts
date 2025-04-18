@@ -19,8 +19,16 @@ export default defineEventHandler(async (event) => {
   // Add this client to the exchange rate SSE clients
   store.sseClients.exchangeRate.add(response)
   
+  // Trigger a heartbeat every 30 seconds to keep connection alive
+  const heartbeatInterval = setInterval(() => {
+    if (!response.writableEnded) {
+      response.write(`: heartbeat\n\n`);
+    }
+  }, 30000);
+  
   // Handle client disconnect
   response.on('close', () => {
+    clearInterval(heartbeatInterval);
     store.sseClients.exchangeRate.delete(response)
   })
 })

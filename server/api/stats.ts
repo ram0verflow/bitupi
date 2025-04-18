@@ -1,33 +1,36 @@
 import { defineEventHandler } from 'h3'
 import { store } from '../index'
+import { calculateStats } from '../utils/stats'
+import { getActiveClientCounts } from '../utils/clientTracker'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Count orders by status
-    let pendingCount = 0
-    let processingCount = 0
-    let completedCount = 0
-    let failedCount = 0
+    // Get comprehensive statistics
+    const platformStats = calculateStats();
     
-    store.orders.forEach(order => {
-      if (order.status === 'pending') pendingCount++
-      else if (order.status === 'processing' || order.status === 'verifying') processingCount++
-      else if (order.status === 'completed') completedCount++
-      else if (order.status === 'failed') failedCount++
-    })
+    // Get active user counts
+    const activeUsers = getActiveClientCounts();
     
     return {
       success: true,
       timestamp: new Date().toISOString(),
       stats: {
         activeSessions: store.sseClients.exchangeRate.size + store.sseClients.orders.size,
-        pendingOrders: pendingCount,
-        processingOrders: processingCount,
-        completedOrders: completedCount,
-        failedOrders: failedCount,
-        totalOrders: store.orders.size,
+        pendingOrders: platformStats.pendingOrders,
+        processingOrders: platformStats.processingOrders,
+        completedOrders: platformStats.completedOrders,
+        failedOrders: platformStats.failedOrders,
+        totalOrders: platformStats.totalOrders,
         uptime: process.uptime().toFixed(2) + 's',
-        currentRate: store.exchangeRate.BTC_INR
+        currentRate: platformStats.currentRate,
+        totalVolumeInr: platformStats.totalVolumeInr,
+        totalVolumeSats: platformStats.totalVolumeSats,
+        
+        // Include active user statistics
+        activeEarners: activeUsers.earners,
+        activeBuyers: activeUsers.buyers,
+        activeVisitors: activeUsers.visitors,
+        activeUsers: activeUsers.total
       }
     }
   } catch (error) {

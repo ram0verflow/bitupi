@@ -1,13 +1,19 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
+import StatsDisplay from '~/components/StatsDisplay.vue';
+import useUserStats from '~/composables/useUserStats';
 
 const router = useRouter();
 const currentRate = ref(0);
 const isLoading = ref(true);
 const randomInsight = ref(null);
 const insightLoading = ref(false);
+const rateSource = ref('');
+const lastUpdated = ref('');
+const activeEarnerCount = ref(0);
+const activeSessionCount = ref(0);
 
 // Function to navigate to send or receive pages
 function navigateTo(path) {
@@ -26,6 +32,15 @@ async function fetchExchangeRate() {
     
     const data = await response.json();
     currentRate.value = data.rate;
+    
+    // Track the source and update time
+    if (data.source) {
+      rateSource.value = data.source;
+    }
+    
+    if (data.timestamp) {
+      lastUpdated.value = new Date(data.timestamp).toLocaleTimeString();
+    }
   } catch (error) {
     console.error('Error fetching exchange rate:', error);
   } finally {
@@ -114,7 +129,7 @@ function stopInsightRotation() {
 }
 
 // Set up SSE for real-time rate updates
-function setupRateUpdates() {
+function setupRealTimeUpdates() {
   if (process.client) {
     try {
       const { $socket } = useNuxtApp();
@@ -122,29 +137,61 @@ function setupRateUpdates() {
       // Subscribe to exchange rate updates
       $socket.subscribeToExchangeRates();
       
-      // Listen for updates
+      // Subscribe to stats updates
+      $socket.subscribeToStats();
+      
+      // Listen for exchange rate updates
       $socket.on('exchange-rate', (data) => {
         if (data && data.rates && data.rates.BTC_INR) {
           currentRate.value = data.rates.BTC_INR;
+          
+          // Update source and timestamp
+          if (data.source) {
+            rateSource.value = data.source;
+          }
+          
+          if (data.timestamp) {
+            lastUpdated.value = new Date(data.timestamp).toLocaleTimeString();
+          }
+        }
+      });
+      
+      // Listen for stats updates
+      $socket.on('stats', (data) => {
+        if (data) {
+          if (typeof data.activeEarners === 'number') {
+            activeEarnerCount.value = data.activeEarners;
+          }
+          if (typeof data.activeSessions === 'number') {
+            activeSessionCount.value = data.activeSessions;
+          }
         }
       });
       
       // Cleanup on component unmount
       onUnmounted(() => {
         $socket.off('exchange-rate');
+        $socket.off('stats');
       });
     } catch (error) {
-      console.error('Failed to initialize exchange rate updates:', error);
+      console.error('Failed to initialize real-time updates:', error);
     }
   }
 }
 
 onMounted(() => {
   fetchExchangeRate();
-  setupRateUpdates();
+  setupRealTimeUpdates();
   // Enable random insights feature
   if (process.client) {
     startInsightRotation();
+    
+    // Register as visitor
+    try {
+      fetch('/api/ping?type=visitor');
+    } catch (error) {
+      console.error('Failed to ping as visitor:', error);
+    }
   }
 });
 
@@ -194,6 +241,10 @@ onUnmounted(() => {
               </div>
               
               <div class="text-text-muted text-sm">
+                <div v-if="rateSource && lastUpdated" class="flex flex-wrap justify-between text-xs mb-2">
+                  <span>Source: <span class="text-primary capitalize">{{ rateSource }}</span></span>
+                  <span>Updated: {{ lastUpdated }}</span>
+                </div>
                 Rate updates in real-time. A small fee is applied to each transaction to support the service.
               </div>
             </div>
@@ -361,6 +412,41 @@ onUnmounted(() => {
               <div class="text-xs text-text-muted mt-4 text-right">~ From satoshinotebook.com</div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="section bg-bg-card">
+      <div class="container py-16">
+        <div class="text-center mb-12">
+          <h2 class="font-display text-3xl font-medium text-text-light mb-4">Platform Statistics</h2>
+          <p class="text-text-muted max-w-2xl mx-auto">Real-time data and your personal statistics</p>
+        </div>
+        
+        <div class="max-w-4xl mx-auto mb-8">
+          <div class="flex justify-center">
+            <div class="bg-secondary/10 border border-secondary/30 rounded-lg px-8 py-4 flex items-center space-x-4">
+              <div class="text-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-display text-xl font-medium text-text-light">Currently <span class="text-secondary">{{ activeEarnerCount }}</span> Earners Online</h3>
+                <p class="text-text-muted">Ready to process your UPI payments in real-time</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <!-- Platform Stats -->
+          <StatsDisplay view="platform" />
+          
+          <!-- User Stats -->
+          <StatsDisplay view="user" />
         </div>
       </div>
     </section>

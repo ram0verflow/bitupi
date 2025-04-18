@@ -12,9 +12,9 @@ export default defineEventHandler(async (event) => {
   }
   
   try {
-    // Generate a mock invoice
+    // Generate a Lightning invoice
     const satAmount = parseInt(body.amount);
-    const invoice = generateInvoice(satAmount);
+    const invoice = await generateInvoice(satAmount);
     
     return {
       success: true,

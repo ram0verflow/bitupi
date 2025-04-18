@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
 import QRCodeUploader from '~/components/QRCodeUploader.vue';
 import OrderCard from '~/components/OrderCard.vue';
+import LightningTester from '~/components/LightningTester.vue';
+import useUserStats from '~/composables/useUserStats';
 
 // State variables
 const step = ref(1); // 1: Form, 2: QR Upload, 3: Invoice, 4: Waiting, 5: Complete
@@ -21,9 +23,15 @@ const qrProcessing = ref(false);
 const eventSource = ref(null);
 const randomInsight = ref(null);
 const insightLoading = ref(false); // Track loading state of insights
+const showTestTools = ref(false); // Toggle for test tools
+const trackingToken = ref(''); // Order tracking token
+const refundWallet = ref(''); // Refund wallet address
 
-// Platform fee calculation
-const platformFee = computed(() => {
+// Get user stats utility
+const { recordSend, updateTransactionStatus } = useUserStats();
+
+// Exchange fee calculation
+const exchangeFeeAmount = computed(() => {
   return Math.ceil(inrAmount.value * exchangeFee.value);
 });
 
@@ -34,7 +42,7 @@ const serviceFee = computed(() => {
 
 // Total fees
 const totalFees = computed(() => {
-  return platformFee.value + serviceFee.value;
+  return exchangeFeeAmount.value + serviceFee.value;
 });
 
 // User gets exactly the amount they entered
@@ -58,7 +66,7 @@ const totalSats = computed(() => {
 
 // Check if form is valid
 const isFormValid = computed(() => {
-  return inrAmount.value >= 100 && inrAmount.value <= 10000;
+  return inrAmount.value >= 100 && inrAmount.value <= 10000 && !!refundWallet.value;
 });
 
 // Get current BTC to INR exchange rate
@@ -188,7 +196,8 @@ async function createOrder() {
         satAmount: totalSats.value,
         upiId: upiData.value.upiId,
         upiName: upiData.value.name || '',
-        orderType: 'buy'
+        orderType: 'buy',
+        refundWallet: refundWallet.value
       })
     });
     
@@ -202,6 +211,24 @@ async function createOrder() {
     if (data.id && data.invoice) {
       orderId.value = data.id;
       lightningInvoice.value = data.invoice;
+      
+      // Store tracking token and keys in localStorage
+      if (data.trackingToken) {
+        trackingToken.value = data.trackingToken;
+        localStorage.setItem('bitupi_tracking_token', data.trackingToken);
+      }
+      
+      if (data.buyerKey) {
+        localStorage.setItem('bitupi_buyer_key', data.buyerKey);
+      }
+      
+      if (data.refundKey) {
+        localStorage.setItem('bitupi_refund_key', data.refundKey);
+      }
+      
+      // Record the send transaction in user stats (not completed yet)
+      recordSend(inrAmount.value, totalSats.value, false);
+      
       step.value = 3; // Move to invoice step
       
       // Start listening for order updates
@@ -232,6 +259,8 @@ function setupOrderUpdates(id) {
           
           if (data.status === 'completed') {
             step.value = 5; // Move to complete step
+            // Update transaction as completed in user stats
+            updateTransactionStatus(true, true, inrAmount.value, totalSats.value);
           } else if (data.status === 'processing') {
             step.value = 4; // Move to waiting for confirmation step
           }
@@ -293,12 +322,48 @@ function copyInvoice() {
   }
 }
 
+// Ping server to update buyer status
+async function pingAsBuyer() {
+  try {
+    await fetch('/api/ping?type=buyer');
+  } catch (error) {
+    console.error('Failed to ping server:', error);
+  }
+}
+
+// Start periodic pinging
+let pingInterval = null;
+let visibilityHandler = null;
+
+function startBuyerPing() {
+  // Ping immediately
+  pingAsBuyer();
+  
+  // Set up more frequent pinging to ensure accurate buyer counts
+  // Ping every 30 seconds while on the send page
+  pingInterval = setInterval(pingAsBuyer, 30 * 1000);
+  
+  // Additionally set up a visibility change event listener to ping
+  // when the user returns to the page after having it in the background
+  if (typeof document !== 'undefined') {
+    visibilityHandler = () => {
+      if (document.visibilityState === 'visible') {
+        pingAsBuyer();
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+  }
+}
+
 // Lifecycle hooks
 onMounted(() => {
   fetchExchangeRate();
   setupRateUpdates();
   // Enable random insights feature
   fetchRandomInsight();
+  
+  // Register as buyer and start periodic pinging
+  startBuyerPing();
 });
 
 onUnmounted(() => {
@@ -311,6 +376,25 @@ onUnmounted(() => {
   if (orderId.value) {
     $socket.leaveOrder(orderId.value);
     $socket.off(`order:${orderId.value}`);
+  }
+  
+  // Clean up ping interval
+  if (pingInterval) {
+    clearInterval(pingInterval);
+  }
+  
+  // Clean up visibility change event listener
+  if (typeof document !== 'undefined' && visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler);
+  }
+  
+  // Notify server we're no longer a buyer when leaving the page
+  if (process.client) {
+    try {
+      fetch('/api/ping?type=visitor');
+    } catch (error) {
+      console.error('Failed to ping as visitor on unmount:', error);
+    }
   }
 });
 </script>
@@ -371,6 +455,25 @@ onUnmounted(() => {
           <p class="text-text-muted text-sm mt-2">Minimum: ₹100, Maximum: ₹10,000</p>
         </div>
         
+        <!-- Refund Wallet - Optional but recommended -->
+        <div class="mb-6">
+          <label for="refundWallet" class="block mb-2 text-text-light font-medium">
+            <span class="text-warning">*</span> Refund Wallet (Required)
+          </label>
+          <input 
+            id="refundWallet"
+            v-model="refundWallet"
+            type="text"
+            class="input"
+            placeholder="Lightning address or LNURL for refunds"
+            required
+          />
+          <p class="text-text-muted text-sm mt-2">
+            Your Lightning Network address for receiving refunds in case of transaction issues.
+            <span class="text-warning">This is necessary to protect your funds.</span>
+          </p>
+        </div>
+        
         <div class="bg-bg-input p-4 rounded-lg border border-border-dark mb-6">
           <h3 class="font-medium text-text-light mb-2">Exchange Summary</h3>
           
@@ -381,8 +484,8 @@ onUnmounted(() => {
             </div>
             
             <div class="flex justify-between items-center">
-              <span class="text-text-muted">Platform Fee ({{ exchangeFee * 100 }}%)</span>
-              <span class="text-text-light">₹ {{ platformFee }}</span>
+              <span class="text-text-muted">Exchange Fee ({{ exchangeFee * 100 }}%)</span>
+              <span class="text-text-light">₹ {{ exchangeFeeAmount }}</span>
             </div>
             
             <div class="flex justify-between items-center">
@@ -485,9 +588,40 @@ onUnmounted(() => {
           your order will be available for someone to process.
         </p>
         
+        <!-- UPI data summary -->
+        <div class="bg-success/10 p-4 rounded-lg border border-success/30 mb-6">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-medium text-text-light">UPI Information</h3>
+          </div>
+          
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-text-muted font-medium">UPI ID:</span>
+              <span class="text-text-light">{{ upiData?.upiId }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-text-muted font-medium">Payee Name:</span>
+              <span class="text-text-light">{{ upiData?.name || 'Not provided' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-text-muted font-medium">Amount:</span>
+              <span class="text-text-light">₹ {{ userReceivesInr }}</span>
+            </div>
+            <div v-if="upiData?.meta?.transactionId" class="flex justify-between">
+              <span class="text-text-muted font-medium">Transaction ID:</span>
+              <span class="text-text-light">{{ upiData.meta.transactionId }}</span>
+            </div>
+            <div v-if="upiData?.meta?.reference" class="flex justify-between">
+              <span class="text-text-muted font-medium">Reference:</span>
+              <span class="text-text-light">{{ upiData.meta.reference }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Lightning invoice -->
         <div class="bg-bg-input p-4 rounded-lg border border-border-dark mb-6">
           <div class="flex justify-between items-center mb-3">
-            <h3 class="font-medium text-text-light">Invoice</h3>
+            <h3 class="font-medium text-text-light">Lightning Invoice</h3>
             
             <button 
               @click="copyInvoice"
@@ -509,6 +643,35 @@ onUnmounted(() => {
             <li>You'll be automatically notified when someone processes your payment</li>
             <li>Confirm receipt of UPI payment to complete the transaction</li>
           </ol>
+          
+          <div class="mt-4 pt-4 border-t border-info/30">
+            <p class="text-text-muted mb-2">
+              We've created a secure tracking page for this order. You can access it anytime:
+            </p>
+            <div class="flex">
+              <NuxtLink to="/track" class="btn-outline-primary text-sm">
+                Track Your Order
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Test Tools Toggle -->
+        <div class="mb-6 text-right">
+          <button 
+            @click="showTestTools = !showTestTools" 
+            class="text-sm text-primary underline"
+          >
+            {{ showTestTools ? 'Hide Test Tools' : 'Show Test Tools' }}
+          </button>
+        </div>
+        
+        <!-- Lightning Test Tools -->
+        <div v-if="showTestTools" class="mb-6">
+          <div class="bg-secondary/10 p-4 rounded-lg border border-secondary/30">
+            <h3 class="font-medium text-text-light mb-4">Test Tools</h3>
+            <LightningTester :initialAmount="totalSats" />
+          </div>
         </div>
         
         <div class="flex justify-between">

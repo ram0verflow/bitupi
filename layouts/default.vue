@@ -26,6 +26,19 @@ onMounted(() => {
     darkMode.value = true;
     document.documentElement.classList.add('dark');
   }
+  
+  // Initialize stats subscription
+  if (process.client) {
+    const { $socket } = useNuxtApp();
+    $socket.subscribeToStats();
+    
+    // Register as visitor (default)
+    try {
+      fetch('/api/ping?type=visitor');
+    } catch (error) {
+      console.error('Failed to ping as visitor:', error);
+    }
+  }
 });
 </script>
 
