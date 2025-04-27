@@ -1,4 +1,4 @@
-# P2P Bitcoin to UPI Exchange Platform
+# LN2UPI - Lightning Network to UPI Exchange Platform
 
 ## Project Overview
 
@@ -58,46 +58,77 @@ Build a serverless, anonymous P2P platform that facilitates Bitcoin Lightning Ne
 ## Implementation Guidelines
 
 ### Tech Stack
-- **Frontend**: Vue 3, Vite, TailwindCSS
-- **Backend**: Serverless functions
-- **Real-time**: WebSockets or Server-Sent Events
-- **Bitcoin**: Lightning Network API integration
+- **Frontend/Backend**: Nuxt.js 3 (Vue 3 framework with integrated server capabilities)
+- **Styling**: TailwindCSS
+- **Real-time**: Server-Sent Events (SSE) with EventSource
+- **Bitcoin**: Lightning Network via OpenLN API
 - **QR Code**: Client-side QR parsing library
+- **Caching**: Redis (ephemeral storage with TTL for pending transactions only)
 
 ### Project Structure
 ```
-bitcoin-upi-exchange/
-├── public/
-├── src/
-│   ├── assets/
-│   ├── components/
-│   │   ├── BuyForm.vue
-│   │   ├── EarnList.vue
-│   │   ├── QrCodeUploader.vue
-│   │   └── ReceiptUploader.vue
-│   ├── composables/
-│   │   ├── useWebsocket.js
-│   │   ├── useLightning.js
-│   │   ├── useExchangeRate.js
-│   │   └── useQrParser.js
-│   ├── pages/
-│   │   ├── HomePage.vue
-│   │   ├── BuyPage.vue
-│   │   └── EarnPage.vue
-│   ├── App.vue
-│   └── main.js
-├── functions/  # Serverless functions
-│   ├── exchange-rate.js
-│   ├── lightning-invoice.js
-│   └── lightning-payment.js
+ln2upi/
+├── assets/
+│   └── css/
+│       └── main.css
+├── components/
+│   ├── AnimatedRateCounter.vue
+│   ├── ConnectionStatus.vue
+│   ├── OrderCard.vue
+│   ├── OrderTracker.vue
+│   ├── QRCodeUploader.vue
+│   ├── ReceiptUploader.vue
+│   └── StatsDisplay.vue
+├── composables/
+│   ├── usePlatformStats.ts
+│   └── useUserStats.ts
+├── layouts/
+│   └── default.vue
+├── pages/
+│   ├── index.vue  # Landing page
+│   ├── buy.vue    # Previously send.vue
+│   └── earn.vue   # Previously receive.vue
+├── plugins/
+│   └── socket.client.ts
+├── server/
+│   ├── api/
+│   │   ├── exchange-rate.ts
+│   │   ├── lightning-invoice.ts
+│   │   ├── lightning.ts
+│   │   ├── lightning-callback.ts
+│   │   ├── orders.ts
+│   │   ├── orders/
+│   │   │   └── [id]/
+│   │   │       ├── claim.ts
+│   │   │       ├── receipt.ts
+│   │   │       └── refund.ts
+│   │   ├── sse/
+│   │   │   ├── exchange-rate.ts
+│   │   │   ├── order/
+│   │   │   │   └── [id].ts
+│   │   │   ├── orders.ts
+│   │   │   └── stats.ts
+│   │   ├── ping.ts
+│   │   ├── process-qr.ts
+│   │   └── stats.ts
+│   ├── utils/
+│   │   ├── clientTracker.ts
+│   │   ├── internal-payment.ts
+│   │   ├── orderUtils.ts
+│   │   └── stats.ts
+│   └── index.ts
+├── app.vue
+├── nuxt.config.ts
 ├── package.json
-└── vite.config.js
+└── tailwind.config.js
 ```
 
 ### API Integrations
-1. **Lightning Network** - Use LND REST API or similar service
+1. **Lightning Network** - Use OpenLN API (LNbits integration)
 2. **Exchange Rate** - Connect to a reliable crypto exchange API
 3. **UPI QR Code** - Use a QR code parser library to extract UPI details
+
+The Lightning Network implementation uses the OpenLN API standard. The specification can be found in the openln.json file. This provides a consistent interface for Lightning Network functionality including invoice creation, payment processing, and callback handling.
 
 ### Security Measures
 - Implement CSRF protection
@@ -160,13 +191,13 @@ Follow these best practices:
 
 ## Developer Notes
 
-- **No Database**: This design intentionally avoids persistent storage. All state must be handled via client-side caching and real-time communication.
+- **Ephemeral Storage**: While the application avoids permanent storage, Redis is used for temporary caching with TTL to maintain order state only for the duration of active transactions. Once a transaction is completed or expires, data is automatically purged.
 - **Exchange Rate Handling**: Implement a mechanism to fetch real-time exchange rates for BTC/INR.
 - **Timeout Mechanism**: Create robust timeout handling for the Earn process to ensure orders return to the marketplace if not completed.
 - **Error Handling**: Build comprehensive error handling, especially for network failures during payment processing.
 - **Scaling Considerations**: While starting simple, design the system to potentially handle increased load in the future.
 - **Testing Real Payments**: Start with very small test amounts during development and QA.
-- **Lightning Network Complexity**: Allow sufficient time to properly implement and test Lightning Network integration.
+- **Lightning Network Complexity**: Implemented using the OpenLN standard to ensure compatibility with common Lightning Network providers.
 
 ## Recommended Libraries
 
