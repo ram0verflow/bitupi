@@ -44,6 +44,7 @@ export type Order = {
   lightning?: {
     invoice: string;
     paid: boolean;
+    paymentHash: string
   };
   receipt?: {
     image: string;
@@ -144,7 +145,7 @@ export function broadcastToOrderClients(orderId: string, data: any) {
   // So we perform minimal sanitization by excluding sensitive fields
   // A full implementation would use the sanitizeOrder utility
   const sanitizedData = { ...data };
-  
+
   // Remove sensitive fields if present
   if (sanitizedData.securityKeys) delete sanitizedData.securityKeys;
   if (sanitizedData.earner?.authKey) delete sanitizedData.earner.authKey;
@@ -178,11 +179,11 @@ export default defineNitroPlugin((nitroApp) => {
     let expiredCount = 0;
     let completedCount = 0;
     let failedCount = 0;
-    
+
     for (const [id, order] of store.orders) {
       const expiresAt = new Date(order.expiresAt);
       const createdAt = new Date(order.createdAt);
-      
+
       // Mark pending orders as failed if they've expired
       if (expiresAt < now && order.status === 'pending') {
         order.status = 'failed';
@@ -193,7 +194,7 @@ export default defineNitroPlugin((nitroApp) => {
         });
         expiredCount++;
       }
-      
+
       // Remove completed orders after 30 minutes
       // This gives users enough time to see the completion status
       // but ensures we don't store any data permanently
@@ -204,7 +205,7 @@ export default defineNitroPlugin((nitroApp) => {
           completedCount++;
         }
       }
-      
+
       // Remove failed orders after 15 minutes
       if (order.status === 'failed') {
         const failedTime = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -214,7 +215,7 @@ export default defineNitroPlugin((nitroApp) => {
         }
       }
     }
-    
+
     // Log cleanup stats only if something was cleaned
     if (expiredCount > 0 || completedCount > 0 || failedCount > 0) {
       console.log(`Order cleanup: ${expiredCount} expired, ${completedCount} completed removed, ${failedCount} failed removed`);
@@ -229,7 +230,7 @@ export default defineNitroPlugin((nitroApp) => {
     try {
       // Calculate stats - this will automatically update store.activeUsers
       const stats = calculateStats();
-      
+
       // Broadcast updated stats to all clients
       broadcastToSSEClients('stats', stats);
     } catch (error) {

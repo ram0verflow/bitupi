@@ -17,22 +17,37 @@ export default defineEventHandler(async (event) => {
   const stats = calculateStats()
   
   try {
-    // Send initial stats
-    response.write(`data: ${JSON.stringify(stats)}\n\n`);
+    // Log initial stats for debugging
+    console.log(`SSE initial stats: Active earners = ${stats.activeEarners}`);
+    
+    // Send initial stats - with a small delay to ensure connection is ready
+    setTimeout(() => {
+      try {
+        // Get fresh stats right before sending
+        const freshStats = calculateStats();
+        console.log(`SSE sending delayed initial stats: Active earners = ${freshStats.activeEarners}`);
+        response.write(`data: ${JSON.stringify(freshStats)}\n\n`);
+      } catch (error) {
+        console.error('Error sending delayed initial stats:', error);
+      }
+    }, 500);
   } catch (error) {
-    console.error('Error sending initial stats SSE:', error);
+    console.error('Error preparing initial stats SSE:', error);
   }
   
   // Send updated stats every 5 seconds
   const interval = setInterval(() => {
     // Get updated stats from the utility function
-    const updatedStats = calculateStats()
+    const updatedStats = calculateStats();
+    
+    // Log updated stats for debugging
+    console.log(`SSE updated stats: Active earners = ${updatedStats.activeEarners}`);
     
     try {
-      response.write(`data: ${JSON.stringify(updatedStats)}\n\n`)
+      response.write(`data: ${JSON.stringify(updatedStats)}\n\n`);
     } catch (e) {
-      console.error('Error sending stats SSE:', e)
-      clearInterval(interval)
+      console.error('Error sending stats SSE:', e);
+      clearInterval(interval);
     }
   }, 5000)
   

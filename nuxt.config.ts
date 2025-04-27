@@ -6,13 +6,13 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
   ],
-  
+
   router: {
     options: {
       strict: false
     },
   },
-  
+
 
   tailwindcss: {
     cssPath: '~/assets/css/main.css',
@@ -44,7 +44,9 @@ export default defineNuxtConfig({
   // Server side
   nitro: {
     plugins: ['~/server/index.ts'],
-    middleware: ['~/server/middleware/route-middleware']
+    middleware: [
+      '~/server/middleware/client-tracker'
+    ]
   },
 
   // API routes
@@ -56,10 +58,6 @@ export default defineNuxtConfig({
     {
       route: '/api/lightning-invoice',
       handler: '~/server/api/lightning-invoice.ts'
-    },
-    {
-      route: '/api/lightning-payment',
-      handler: '~/server/api/lightning-payment.ts'
     },
     {
       route: '/api/process-qr',

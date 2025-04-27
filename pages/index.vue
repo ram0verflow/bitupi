@@ -417,9 +417,9 @@ onUnmounted(() => {
         </div>
         
         <div class="max-w-4xl mx-auto mb-8">
-          <!-- Only show earner information when there are active earners -->
+          <!-- Always show earner information - animation will make it appear when earners are online -->
           <div class="flex justify-center" v-if="platformStats.activeEarners > 0">
-            <div class="bg-secondary/10 border border-secondary/30 rounded-lg px-8 py-4 flex items-center space-x-4">
+            <div class="bg-secondary/10 border border-secondary/30 rounded-lg px-8 py-4 flex items-center space-x-4 animate-fadeIn">
               <div class="text-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -427,7 +427,7 @@ onUnmounted(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="font-display text-xl font-medium text-text-light">Currently <span class="text-secondary">{{ platformStats.activeEarners }}</span> Earners Online</h3>
+                <h3 class="font-display text-xl font-medium text-text-light">Currently <span class="text-secondary animate-pulse">{{ platformStats.activeEarners }}</span> Earners Online</h3>
                 <p class="text-text-muted">Ready to process your UPI payments in real-time</p>
               </div>
             </div>

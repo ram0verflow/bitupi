@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import OrderCard from '~/components/OrderCard.vue';
 import ReceiptUploader from '~/components/ReceiptUploader.vue';
-import LightningTester from '~/components/LightningTester.vue';
 import useUserStats from '~/composables/useUserStats';
 
 // State variables
@@ -45,7 +44,9 @@ async function fetchOrders() {
     }
     
     const data = await response.json();
-    if (Array.isArray(data)) {
+    if (data.success && Array.isArray(data.orders)) {
+      orders.value = data.orders;
+    } else if (Array.isArray(data)) {
       orders.value = data;
     }
   } catch (error) {
@@ -113,11 +114,14 @@ async function claimOrder(order) {
     isSubmitting.value = true;
     errorMessage.value = '';
     
-    const response = await fetch(`/api/orders/${order.id}/claim`, {
+    const response = await fetch(`/api/orders/${order.id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        action: 'claim'
+      })
     });
     
     if (!response.ok) {
@@ -221,15 +225,16 @@ async function submitReceipt() {
   errorMessage.value = '';
   
   try {
-    const response = await fetch(`/api/orders/${selectedOrder.value.id}/receipt`, {
+    const response = await fetch(`/api/orders/${selectedOrder.value.id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        action: 'receipt',
         receiptImage: receipt.value.image,
         lightningAddress: lightningAddress.value,
-        earnerKey: earnerKey.value  // Include earner authentication key
+        earnerKey: earnerKey.value
       })
     });
     
@@ -432,26 +437,6 @@ onUnmounted(() => {
           <li>Once the buyer confirms receipt, you'll receive the bitcoin payment</li>
         </ol>
         
-        <!-- Test Tools Toggle -->
-        <div class="mt-4 pt-4 border-t border-secondary/30 text-right">
-          <button 
-            @click="showTestTools = !showTestTools" 
-            class="text-sm text-secondary underline"
-          >
-            {{ showTestTools ? 'Hide Testing Tools' : 'Show Testing Tools' }}
-          </button>
-        </div>
-        
-        <!-- Lightning Test Tools -->
-        <div v-if="showTestTools" class="mt-4">
-          <div class="bg-bg-input p-4 rounded-lg">
-            <h3 class="font-medium text-text-light mb-4">Lightning Payment Testing</h3>
-            <p class="text-text-muted mb-4">
-              Use this tool to test Lightning invoice generation and payments for development purposes.
-            </p>
-            <LightningTester :initialAmount="50000" />
-          </div>
-        </div>
       </div>
       
       <div class="max-w-4xl mx-auto">

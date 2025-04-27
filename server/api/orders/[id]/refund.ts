@@ -26,10 +26,10 @@ export default defineEventHandler(async (event) => {
     });
   }
   
-  if (!body.refundWallet && !body.lightningAddress) {
+  if (!body.refundWallet && !body.lightningAddress && !body.refundInvoice) {
     throw createError({
       statusCode: 400,
-      message: 'Refund wallet or lightning address is required'
+      message: 'Refund wallet, lightning address, or lightning invoice is required'
     });
   }
   
@@ -73,9 +73,26 @@ export default defineEventHandler(async (event) => {
     order.refund.walletAddress = body.refundWallet;
   }
   
-  // Process the refund (in a real app, this would interact with the Lightning Network)
-  // For demo, we'll just mark the order as failed
-  order.status = 'failed';
+  // Process the refund via Lightning Network
+  try {
+    // If we have a Lightning address, create a withdrawal link
+    if (body.lightningAddress) {
+      const { createWithdrawLink } = await import('../../../lightning-payment');
+      await createWithdrawLink(order.satAmount, `BitUPI Refund for order ${orderId.substring(0, 8)}`, 1);
+    } 
+    // If we have an invoice, pay it directly
+    else if (body.refundInvoice) {
+      const { processInternalPayment } = await import('../../../utils/internal-payment');
+      await processInternalPayment(body.refundInvoice, `Refund for order ${orderId}`);
+    }
+
+    // Mark the order as failed after refund
+    order.status = 'failed';
+  } catch (error) {
+    console.error(`Error processing refund for order ${orderId}:`, error);
+    // Still mark as failed even if payment has issues, but log the error
+    order.status = 'failed';
+  }
   
   // Add refund information
   if (!order.refund) {

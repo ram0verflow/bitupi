@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import AnimatedRateCounter from '~/components/AnimatedRateCounter.vue';
 import QRCodeUploader from '~/components/QRCodeUploader.vue';
 import OrderCard from '~/components/OrderCard.vue';
-import LightningTester from '~/components/LightningTester.vue';
 import useUserStats from '~/composables/useUserStats';
 
 // State variables
@@ -15,6 +14,9 @@ const upiData = ref(null);
 const orderId = ref(null);
 const orderStatus = ref('pending');
 const lightningInvoice = ref('');
+const paymentHash = ref(''); // Store payment hash for status checks
+const invoicePaid = ref(false); // Track if invoice has been paid
+const checkingPayment = ref(false); // Track if payment check is in progress
 const exchangeFee = ref(0.02); // 2% default
 const serviceFeePercent = ref(0.01); // 1% service fee
 const isSubmitting = ref(false);
@@ -23,7 +25,6 @@ const qrProcessing = ref(false);
 const eventSource = ref(null);
 const randomInsight = ref(null);
 const insightLoading = ref(false); // Track loading state of insights
-const showTestTools = ref(false); // Toggle for test tools
 const trackingToken = ref(''); // Order tracking token
 const refundWallet = ref(''); // Refund wallet address
 
@@ -186,12 +187,13 @@ async function createOrder() {
   errorMessage.value = '';
   
   try {
-    const response = await fetch('/api/create-order', {
+    const response = await fetch('/api/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        action: 'create',
         inrAmount: inrAmount.value,
         satAmount: totalSats.value,
         upiId: upiData.value.upiId,
@@ -211,6 +213,7 @@ async function createOrder() {
     if (data.id && data.invoice) {
       orderId.value = data.id;
       lightningInvoice.value = data.invoice;
+      paymentHash.value = data.paymentHash;
       
       // Store tracking token and keys in localStorage
       if (data.trackingToken) {
@@ -302,6 +305,8 @@ function resetForm() {
   orderId.value = null;
   orderStatus.value = 'pending';
   lightningInvoice.value = '';
+  paymentHash.value = '';
+  invoicePaid.value = false;
   errorMessage.value = '';
   
   // Setup rate updates again
@@ -319,6 +324,47 @@ function copyInvoice() {
       .catch(err => {
         console.error('Could not copy text: ', err);
       });
+  }
+}
+
+// Check the payment status
+async function checkPaymentStatus() {
+  if (!paymentHash.value) {
+    errorMessage.value = 'No payment hash available to check';
+    return;
+  }
+  
+  checkingPayment.value = true;
+  
+  try {
+    const response = await fetch(`/api/lightning?action=check&paymentHash=${paymentHash.value}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to check payment status');
+    }
+    
+    const data = await response.json();
+    
+    // Update paid status
+    if (data.status === 'paid' || data.paid) {
+      invoicePaid.value = true;
+      console.log('Invoice has been paid!');
+      
+      // Move to order waiting stage after payment
+      step.value = 4;
+    } else {
+      console.log('Invoice not paid yet. Status:', data.status);
+    }
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    errorMessage.value = 'Failed to check payment status';
+  } finally {
+    checkingPayment.value = false;
   }
 }
 
@@ -429,10 +475,7 @@ onUnmounted(() => {
         </template>
       </div>
       
-      <!-- Error message -->
-      <div v-if="errorMessage" class="mb-8 p-4 bg-error/10 border border-error rounded-lg">
-        <p class="text-error">{{ errorMessage }}</p>
-      </div>
+
       
       <!-- Step 1: Amount Form -->
       <div v-if="step === 1" class="card mb-8">
@@ -631,8 +674,40 @@ onUnmounted(() => {
             </button>
           </div>
           
+          <!-- QR Code for Lightning invoice -->
+          <div v-if="lightningInvoice" class="flex flex-col items-center mb-4">
+            <img 
+              :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(lightningInvoice)}`" 
+              alt="Lightning Invoice QR Code" 
+              class="mb-2 h-48 w-48 border border-border-dark rounded"
+            />
+            <span class="text-text-muted text-sm">Scan with Lightning wallet</span>
+          </div>
+          
           <div class="overflow-x-auto font-mono text-xs text-text-muted bg-bg-dark p-3 rounded break-all">
             {{ lightningInvoice || 'Generating invoice...' }}
+          </div>
+          
+          <!-- Payment status section -->
+          <div v-if="paymentHash" class="mt-4 pt-4 border-t border-border-dark">
+            <div class="flex items-center justify-between">
+              <span class="text-text-muted">Payment Status:</span>
+              <span 
+                :class="{'text-warning': !invoicePaid, 'text-success': invoicePaid}"
+                class="font-medium"
+              >
+                {{ invoicePaid ? 'Paid' : 'Awaiting Payment' }}
+              </span>
+            </div>
+            <div v-if="!invoicePaid" class="flex justify-center mt-4">
+              <button 
+                @click="checkPaymentStatus" 
+                class="px-4 py-2 rounded bg-primary/20 hover:bg-primary/30 text-primary text-sm"
+                :disabled="checkingPayment"
+              >
+                {{ checkingPayment ? 'Checking...' : 'Check Payment Status' }}
+              </button>
+            </div>
           </div>
         </div>
         
@@ -656,23 +731,6 @@ onUnmounted(() => {
           </div>
         </div>
         
-        <!-- Test Tools Toggle -->
-        <div class="mb-6 text-right">
-          <button 
-            @click="showTestTools = !showTestTools" 
-            class="text-sm text-primary underline"
-          >
-            {{ showTestTools ? 'Hide Test Tools' : 'Show Test Tools' }}
-          </button>
-        </div>
-        
-        <!-- Lightning Test Tools -->
-        <div v-if="showTestTools" class="mb-6">
-          <div class="bg-secondary/10 p-4 rounded-lg border border-secondary/30">
-            <h3 class="font-medium text-text-light mb-4">Test Tools</h3>
-            <LightningTester :initialAmount="totalSats" />
-          </div>
-        </div>
         
         <div class="flex justify-between">
           <button 

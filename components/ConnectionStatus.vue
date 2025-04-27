@@ -34,8 +34,16 @@ onMounted(() => {
       }
       
       // Update active earners count if available
-      if (data && typeof data.activeEarners === 'number') {
-        activeEarners.value = data.activeEarners;
+      // Check both nested and flat data structures to be safe
+      if (data) {
+        if (typeof data.activeEarners === 'number') {
+          activeEarners.value = data.activeEarners;
+        } else if (data.stats && typeof data.stats.activeEarners === 'number') {
+          activeEarners.value = data.stats.activeEarners;
+        }
+        
+        // Debug log to track earner count updates
+        console.log(`ConnectionStatus: Active earners updated to ${activeEarners.value}`);
       }
     });
     

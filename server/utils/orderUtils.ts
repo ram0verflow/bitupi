@@ -55,10 +55,19 @@ export function sanitizeOrder(order: Order, isOwner: boolean = false): Partial<O
 
 /**
  * Sanitizes a list of orders for public display in the marketplace 
+ * Only returns orders that have paid Lightning invoices
  * 
  * @param orders Array of orders to sanitize
- * @returns Array of sanitized orders
+ * @returns Array of sanitized orders that have paid invoices
  */
 export function sanitizeOrdersList(orders: Order[]): Partial<Order>[] {
-  return orders.map(order => sanitizeOrder(order, false));
+  // Filter orders to only include those with paid lightning invoices
+  const paidOrders = orders.filter(order => 
+    order.lightning && order.lightning.paid === true
+  );
+  
+  console.log(`Filtered orders: ${paidOrders.length} of ${orders.length} have paid invoices`);
+  
+  // Sanitize the filtered list
+  return paidOrders.map(order => sanitizeOrder(order, false));
 }

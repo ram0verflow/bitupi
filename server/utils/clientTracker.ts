@@ -121,6 +121,11 @@ export function updateClientType(clientId: string, type: 'earner' | 'buyer' | 'v
       if (type === 'earner' || oldType === 'earner') {
         const counts = getActiveClientCounts();
         console.log(`[EARNER COUNT UPDATED] Now ${counts.earners} active earners`);
+        
+        // Force an immediate stats update in the main store
+        if (store) {
+          store.activeUsers = counts;
+        }
       }
     } else {
       // Just update the last seen timestamp

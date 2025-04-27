@@ -10,12 +10,14 @@ export default defineEventHandler(async (event) => {
   
   const response = event.node.res
   
-  // Send initial list of active orders
+  // Send initial list of active orders with paid invoices
   const activeOrders = Array.from(store.orders.values())
     .filter(order => order.status === 'pending')
   
-  // Sanitize order data before sending
+  // Sanitize order data before sending - this also filters for paid invoices
   const sanitizedOrders = sanitizeOrdersList(activeOrders)
+  
+  console.log(`SSE orders: Sending ${sanitizedOrders.length} orders with paid invoices to new client`)
   
   response.write(`data: ${JSON.stringify({
     action: 'init',

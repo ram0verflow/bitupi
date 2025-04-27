@@ -1,23 +1,29 @@
-import { defineEventHandler, readBody, createError } from 'h3';
+import { defineEventHandler, readBody, createError, getQuery } from 'h3';
 import { checkPaymentStatus } from '../lightning-payment';
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event);
+  // Get paymentHash from route or body params
+  const query = getQuery(event);
+  const body = await readBody(event).catch(() => ({}));
   
-  if (!body.invoice) {
+  const paymentHash = query.paymentHash as string || body.paymentHash;
+  
+  if (!paymentHash) {
     throw createError({
       statusCode: 400,
-      message: 'Lightning invoice is required'
+      message: 'Lightning payment hash is required'
     });
   }
   
   try {
     // Check Lightning payment status
-    const result = await checkPaymentStatus(body.invoice);
+    const result = await checkPaymentStatus(paymentHash);
     
     return {
       success: true,
       paid: result.paid,
+      status: result.status,
+      confirmedAt: result.confirmedAt,
       timestamp: new Date().toISOString()
     };
   } catch (error) {

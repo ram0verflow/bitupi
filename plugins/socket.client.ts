@@ -342,6 +342,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     // Update stats with the safe data
     updateStats(safeData);
     
+    // Debug log to track earner count updates
+    console.log(`Socket plugin: Stats updated, active earners = ${safeData.activeEarners || 'not provided'}`);
+    
     // Also emit the stats event with the safe data
     nuxtApp.hook('sse:stats-updated', safeData);
   })

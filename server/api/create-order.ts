@@ -8,11 +8,8 @@ function generateOrderId() {
   return 'order_' + crypto.randomBytes(8).toString('hex')
 }
 
-// Generate a random Lightning invoice
-function generateLightningInvoice(satAmount: number) {
-  const randomHex = crypto.randomBytes(32).toString('hex')
-  return `lnbc${satAmount}n1p${randomHex}pp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdqa9qsp5emwvgdkar4ptp0trfzv0hrqfwfku29ru7n5zt45ve5a45qgc3ntq9qyyssq3vrmwj23r0p9m4e5kr65tn8nr350pw3w8ndl98rxfd9l6qj2ydc2n0whucrpzrwxdnf896qn9qy8mskuevm7h4tp6vg68nvtrpw3v83mcp27w5se`
-}
+// Import Lightning invoice generation function
+import { generateInvoice } from '../lightning-payment'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -34,16 +31,23 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // Generate order ID and expiration time
-    const orderId = generateOrderId()
+    // Generate expiration time
     const now = new Date()
     const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour from now
     
     // Calculate satoshi amount if not provided
     const finalSatAmount = satAmount || Math.round(parseFloat(inrAmount) * 100)
     
-    // Generate a Lightning invoice for testing
-    const lightningInvoice = generateLightningInvoice(finalSatAmount)
+    // Generate a real Lightning invoice
+    const memo = `BitUPI Payment: ₹${inrAmount} via ${upiId}`
+    const invoiceResult = await generateInvoice(finalSatAmount, memo)
+    
+    // Create an order ID first so we can associate the invoice with it
+    const orderId = generateOrderId()
+    
+    // Associate the payment with the order
+    const { associatePaymentWithOrder } = await import('../lightning-payment')
+    associatePaymentWithOrder(invoiceResult.paymentHash, orderId)
     
     // Generate security keys for multi-signature authentication
     const securityKeys = generateSecurityKeys()
@@ -62,8 +66,9 @@ export default defineEventHandler(async (event) => {
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       lightning: {
-        invoice: lightningInvoice,
-        paid: false
+        invoice: invoiceResult.invoice,
+        paid: false,
+        paymentHash: invoiceResult.paymentHash
       },
       // Add security keys
       securityKeys: {
@@ -78,19 +83,12 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // Store the order
+    // Store the order in memory but don't broadcast yet
+    // Order will only be broadcast to the marketplace after LN invoice is paid
     store.orders.set(orderId, order)
     
-    // Broadcast to all clients listening to orders
-    broadcastToSSEClients('orders', {
-      action: 'add',
-      // Filter out sensitive information from broadcast
-      order: {
-        ...order,
-        securityKeys: undefined, // Don't broadcast security keys
-        refund: undefined // Don't broadcast refund information
-      }
-    })
+    // Store the order creation timestamp for cleanup
+    console.log(`Created order ${orderId}, waiting for Lightning payment before publishing to marketplace`)
     
     // Generate a tracking token for the buyer
     const trackingToken = generateTrackingToken(orderId, 'buyer', securityKeys.buyerKey)
@@ -98,7 +96,8 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       id: orderId,
-      invoice: lightningInvoice,
+      invoice: invoiceResult.invoice,
+      paymentHash: invoiceResult.paymentHash,
       // Return security information to the buyer
       trackingToken,
       buyerKey: securityKeys.buyerKey,

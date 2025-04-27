@@ -206,11 +206,46 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-// Helper function to auto-complete orders (for demo)
+// Helper function to auto-complete orders and process payment
 async function completeOrder(orderId: string) {
   const order = store.orders.get(orderId)
   
   if (order && order.status === 'verifying') {
+    try {
+      // Process the payment to the earner if we have a lightning address
+      if (order.earner?.lightningAddress) {
+        // Calculate earner's reward (1% of the order's sat amount)
+        const exchangeFeePercent = 0.02; // 2%
+        const earnerSharePercent = 0.5; // 50% of the fee
+        const reward = Math.ceil(order.satAmount * exchangeFeePercent * earnerSharePercent);
+        
+        // Based on the type of lightning address/invoice
+        const address = order.earner.lightningAddress;
+        
+        // Handle Lightning Address or LNURL
+        if (address.includes('@') || address.toLowerCase().startsWith('lnurl')) {
+          const { createWithdrawLink } = await import('../../../lightning-payment');
+          await createWithdrawLink(
+            reward, 
+            `BitUPI Payment for order ${orderId.substring(0, 8)}`, 
+            Math.max(1, Math.floor(reward * 0.01))
+          );
+          console.log(`Created withdrawal link of ${reward} sats for ${address}`);
+        } 
+        // Handle Lightning Invoice
+        else if (address.toLowerCase().startsWith('ln')) {
+          const { processInternalPayment } = await import('../../../utils/internal-payment');
+          await processInternalPayment(address, `Payment for order ${orderId}`);
+          console.log(`Paid invoice directly for ${reward} sats`);
+        }
+      } else {
+        console.warn(`Order ${orderId} completed but no lightning address available for payment`);
+      }
+    } catch (error) {
+      console.error(`Error processing payment for order ${orderId}:`, error);
+      // Continue with order completion even if payment fails
+    }
+    
     // Update status to completed
     order.status = 'completed'
     
@@ -233,6 +268,6 @@ async function completeOrder(orderId: string) {
       }
     })
     
-    console.log(`Auto-completed order ${orderId} for demo purposes`)
+    console.log(`Completed order ${orderId}`)
   }
 }

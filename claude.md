@@ -193,3 +193,9 @@ Follow these best practices:
 - Use composition API for reusable logic
 - Leverage browser APIs where possible
 - Minimize external dependencies
+
+# imp guidelines
+- NO MOCK DATA unless its tests there must be ZERO Mock DATA in PRODUCTION CODE
+-  i don't want to see api data coming from mock sources if something is not there STOP AND ASK
+- Typescript must be fully adhered to Always follow good practices for typing 
+- I don't want 'any' in ts files
