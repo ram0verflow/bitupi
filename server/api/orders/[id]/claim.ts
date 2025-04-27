@@ -1,96 +1,92 @@
-import { defineEventHandler, getRouterParam, createError, readBody } from 'h3'
-import { store, broadcastToSSEClients, broadcastToOrderClients } from '../../../index'
-import { generateSecurityKey, generateTrackingToken } from '../../../utils/security'
+import { defineEventHandler, readBody, getRouterParam, createError } from 'h3';
+import { store, broadcastToSSEClients, broadcastToOrderClients } from '../../../index';
+import { generateTrackingToken } from '../../../utils/security';
+import crypto from 'crypto';
 
+/**
+ * Order claim API
+ * 
+ * POST /api/orders/:id/claim - Claim an order for processing
+ */
 export default defineEventHandler(async (event) => {
-  const orderId = getRouterParam(event, 'id')
-  const body = await readBody(event)
+  const orderId = getRouterParam(event, 'id');
   
-  if (!orderId) {
+  if (\!orderId) {
     throw createError({
       statusCode: 400,
       message: 'Order ID is required'
-    })
+    });
   }
   
   // Get the order
-  const order = store.orders.get(orderId)
-  
-  if (!order) {
+  const order = store.orders.get(orderId);
+  if (\!order) {
     throw createError({
       statusCode: 404,
       message: 'Order not found'
-    })
+    });
   }
   
-  // Check if order is available to claim
-  if (order.status !== 'pending') {
+  // Check if order is in pending status
+  if (order.status \!== 'pending') {
     throw createError({
       statusCode: 400,
-      message: 'This order is no longer available'
-    })
+      message: 'Order cannot be claimed in its current state'
+    });
   }
   
-  // Generate earner key for multi-signature authentication
-  const earnerKey = generateSecurityKey()
+  // Check if Lightning payment is confirmed
+  if (\!order.lightning?.paid) {
+    throw createError({
+      statusCode: 400,
+      message: 'Order payment has not been confirmed yet'
+    });
+  }
   
-  // Update the security keys to include earner key
+  // Generate earner key
+  const earnerKey = crypto.randomBytes(16).toString('hex');
+  
+  // Update order status and add earner info
+  order.status = 'processing';
+  order.earner = {
+    authKey: earnerKey
+  };
+  
   if (order.securityKeys) {
-    order.securityKeys.earnerKey = earnerKey
+    order.securityKeys.earnerKey = earnerKey;
   }
-  
-  // Update order status to processing
-  order.status = 'processing'
-  
-  // Initialize earner object if it doesn't exist
-  if (!order.earner) {
-    order.earner = {}
-  }
-  
-  // Store the earner's auth key
-  order.earner.authKey = earnerKey
-  
-  // Set processing expiry time (15 minutes from now)
-  const processingExpiresAt = new Date(Date.now() + 15 * 60 * 1000)
   
   // Store updated order
-  store.orders.set(orderId, order)
+  store.orders.set(orderId, order);
   
   // Notify specific order clients
   broadcastToOrderClients(orderId, {
     id: orderId,
     status: 'processing',
     updatedAt: new Date().toISOString()
-  })
+  });
   
   // Notify all orders clients about status change
   broadcastToSSEClients('orders', {
     action: 'update',
     order: {
       ...order,
-      securityKeys: undefined, // Don't broadcast security keys
-      refund: undefined // Don't broadcast refund information
+      securityKeys: undefined,
+      refund: undefined,
+      earner: undefined,
+      updatedAt: new Date().toISOString()
     }
-  })
+  });
   
-  // Generate a tracking token for the earner
-  const trackingToken = generateTrackingToken(orderId, 'earner', earnerKey)
+  // Generate tracking token for earner
+  const trackingToken = generateTrackingToken(orderId, 'earner', earnerKey);
   
   return {
     success: true,
     orderId,
     status: 'processing',
     trackingToken,
-    earnerKey,
-    // Return filtered order information (no sensitive data)
-    order: {
-      id: order.id,
-      inrAmount: order.inrAmount,
-      upiId: order.upiId,
-      upiName: order.upiName,
-      status: order.status,
-      createdAt: order.createdAt,
-      expiresAt: order.expiresAt
-    }
-  }
-})
+    earnerKey
+  };
+});
+EOF < /dev/null

@@ -2,6 +2,28 @@
 
 All notable changes to the LN2UPI project are documented in this file.
 
+## [1.2.0] - 2025-04-27
+
+### Added
+- Added comprehensive documentation for API endpoints
+- Created README files for each API domain with clear descriptions
+- Implemented standardized error response formats across endpoints
+
+### Changed
+- Restructured server/api directory to follow RESTful principles
+- Consolidated duplicate code across related endpoints
+- Reorganized API endpoints into logical resource-based directories
+- Improved import paths throughout the codebase
+- Renamed routes for better consistency with LN2UPI branding
+- Migrated from flat structure to nested RESTful resources
+
+### Improved
+- Enhanced API organization with separate directories for each resource
+- Better separation of concerns between different API domains
+- More intuitive URL structure for API consumers
+- Reduced code duplication through consolidation
+- Clearer file naming that reflects endpoint purpose
+
 ## [1.1.0] - 2025-04-14
 
 ### Added
@@ -18,47 +40,9 @@ All notable changes to the LN2UPI project are documented in this file.
 - Improved socket connection with robust error handling
 - Upgraded animations with smoother physics-based transitions
 - Connected socket endpoints for real-time order updates
-- Fixed TypeScript type definitions for better code reliability
-- Implemented proper SSE fallback for all WebSocket features
 
-### Technical
-- Used RequestAnimationFrame for smooth animations
-- Fixed import paths for server components
-- Added TypeScript interfaces for Lightning Network data
-- Enhanced Redis connection handling
-- Implemented complete type safety across backend
-- Added glow effects and advanced gradients with CSS animations
-- Improved error handling with proper type checking
-
-## [1.0.0] - 2025-04-14
-
-### Added
-- Complete Nuxt.js implementation with server API endpoints
-- Home page with India-specific content and statistics
-- Buy Bitcoin flow with step-by-step process
-- Earn Bitcoin flow with order listing and processing
-- Server endpoints for exchange rates and Lightning Network operations
-- Bitcoin and UPI logo components
-- Indian-context educational tips
-- Mobile-responsive layout with tailored UI for smaller screens
-- TailwindCSS configuration with Indian-inspired color palette
-
-### Changed
-- Migrated from Vue 3 + Vite to Nuxt.js for server-side functionality
-- Restructured the project to follow Nuxt.js conventions
-- Enhanced UI with Indian cultural context and design elements
-- Implemented proper server API routes for backend operations
-
-## [0.5.0] - 2025-04-13
-
-### Added
-- Initial Vue 3 + Vite implementation
-- Basic project structure following Vue.js conventions
-- Preliminary UI components without proper styling
-- Mock data for demonstration purposes
-
-### Technical
-- Set up Vue 3 with Composition API
-- Implemented Vue Router for navigation
-- Added TailwindCSS for styling (incomplete configuration)
-- Created component structure based on project specifications
+### Fixed
+- Resolved multiple WebSocket connection issues
+- Fixed race conditions in order state updates
+- Corrected exchange rate calculation discrepancies
+- Addressed UI flickering on slow connections

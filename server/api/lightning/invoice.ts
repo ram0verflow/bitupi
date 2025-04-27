@@ -1,10 +1,22 @@
 import { defineEventHandler, readBody, createError, getQuery } from 'h3';
-import { generateInvoice, associatePaymentWithOrder } from '../lightning-payment';
+import { generateInvoice, associatePaymentWithOrder } from '../../lightning-payment';
 
+/**
+ * Lightning Invoice API - Creates a new Lightning invoice
+ * 
+ * Dedicated endpoint for invoice generation:
+ * - POST /api/lightning/invoice
+ * - GET /api/lightning/invoice?amount=1000
+ */
 export default defineEventHandler(async (event) => {
   // Support both GET and POST methods
+  const method = event.method || 'GET';
   const query = getQuery(event);
-  const body = await readBody(event).catch(() => ({}));
+  
+  // For POST, read the body
+  const body = method === 'POST' 
+    ? await readBody(event).catch(() => ({})) 
+    : {};
   
   // Get amount from query or body
   const amountParam = query.amount || body.amount;
@@ -18,7 +30,7 @@ export default defineEventHandler(async (event) => {
   try {
     // Generate a Lightning invoice
     const satAmount = parseInt(String(amountParam));
-    const memo = query.memo || body.memo || 'BitUPI Payment';
+    const memo = query.memo || body.memo || 'LN2UPI Payment';
     const orderId = query.orderId || body.orderId;
     
     const result = await generateInvoice(satAmount, memo);

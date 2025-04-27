@@ -86,31 +86,41 @@ ln2upi/
 │   └── default.vue
 ├── pages/
 │   ├── index.vue  # Landing page
-│   ├── buy.vue    # Previously send.vue
-│   └── earn.vue   # Previously receive.vue
+│   ├── buy.vue    # Buy Bitcoin flow
+│   └── earn.vue   # Earn Bitcoin flow
 ├── plugins/
 │   └── socket.client.ts
 ├── server/
 │   ├── api/
-│   │   ├── exchange-rate.ts
-│   │   ├── lightning-invoice.ts
-│   │   ├── lightning.ts
-│   │   ├── lightning-callback.ts
-│   │   ├── orders.ts
+│   │   ├── lightning/
+│   │   │   ├── index.ts        # Main Lightning functions
+│   │   │   ├── invoice.ts      # Create Lightning invoice
+│   │   │   ├── payment/        # Payment status checking
+│   │   │   │   └── index.ts
+│   │   │   ├── withdraw.ts     # Create withdrawal links
+│   │   │   └── callback.ts     # Handle payment notifications
 │   │   ├── orders/
+│   │   │   ├── index.ts        # List & create orders
 │   │   │   └── [id]/
-│   │   │       ├── claim.ts
-│   │   │       ├── receipt.ts
-│   │   │       └── refund.ts
+│   │   │       ├── index.ts    # Get order details
+│   │   │       ├── claim.ts    # Claim order for processing
+│   │   │       ├── receipt.ts  # Upload receipt
+│   │   │       ├── refund.ts   # Process refund
+│   │   │       ├── approve.ts  # Approve order
+│   │   │       └── status.ts   # Check order status
+│   │   ├── stats/
+│   │   │   └── index.ts        # Platform statistics
+│   │   ├── utils/
+│   │   │   ├── exchange-rate.ts # Exchange rate utility
+│   │   │   ├── process-qr.ts    # QR code processing
+│   │   │   └── random-insight.ts # Bitcoin insights
 │   │   ├── sse/
 │   │   │   ├── exchange-rate.ts
 │   │   │   ├── order/
 │   │   │   │   └── [id].ts
 │   │   │   ├── orders.ts
 │   │   │   └── stats.ts
-│   │   ├── ping.ts
-│   │   ├── process-qr.ts
-│   │   └── stats.ts
+│   │   └── ping.ts
 │   ├── utils/
 │   │   ├── clientTracker.ts
 │   │   ├── internal-payment.ts
@@ -122,6 +132,38 @@ ln2upi/
 ├── package.json
 └── tailwind.config.js
 ```
+
+### API Structure
+
+The API follows RESTful principles with a resource-based organization:
+
+#### Lightning Endpoints
+- `GET/POST /api/lightning` - Main Lightning functions
+- `POST /api/lightning/invoice` - Create Lightning invoice
+- `GET /api/lightning/payment/:hash` - Check payment status
+- `POST /api/lightning/withdraw` - Create withdraw link
+- `POST /api/lightning/callback` - Handle payment notifications
+
+#### Order Endpoints
+- `GET /api/orders` - List all available orders
+- `POST /api/orders` - Create a new order
+- `GET /api/orders/:id` - Get order details
+- `POST /api/orders/:id/claim` - Claim an order
+- `POST /api/orders/:id/receipt` - Upload receipt
+- `POST /api/orders/:id/refund` - Process refund
+- `POST /api/orders/:id/approve` - Approve receipt and complete order
+- `GET /api/orders/:id/status` - Check order status with tracking token
+
+#### Utility Endpoints
+- `GET /api/utils/exchange-rate` - Get current exchange rate
+- `POST /api/utils/process-qr` - Process QR code image
+- `GET /api/utils/random-insight` - Get random Bitcoin insight
+
+#### SSE Endpoints
+- `GET /api/sse/stats` - Stats updates stream
+- `GET /api/sse/exchange-rate` - Exchange rate updates
+- `GET /api/sse/orders` - Order marketplace updates
+- `GET /api/sse/order/:id` - Specific order updates
 
 ### API Integrations
 1. **Lightning Network** - Use OpenLN API (LNbits integration)

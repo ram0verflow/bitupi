@@ -1,12 +1,20 @@
-import { defineEventHandler, readBody, createError, getQuery } from 'h3';
-import { checkPaymentStatus } from '../lightning-payment';
+import { defineEventHandler, readBody, createError, getQuery, getRouterParam } from 'h3';
+import { checkPaymentStatus } from '../../../lightning-payment';
 
+/**
+ * Lightning Payment Status API
+ * 
+ * GET /api/lightning/payment/:hash - Check payment status with hash in URL
+ * GET /api/lightning/payment?paymentHash=xxx - Check payment status with hash in query
+ * POST /api/lightning/payment - Check payment status with hash in body
+ */
 export default defineEventHandler(async (event) => {
-  // Get paymentHash from route or body params
+  // Get paymentHash from route param, query, or body
+  const hashParam = getRouterParam(event, 'hash');
   const query = getQuery(event);
   const body = await readBody(event).catch(() => ({}));
   
-  const paymentHash = query.paymentHash as string || body.paymentHash;
+  const paymentHash = hashParam || query.paymentHash as string || body.paymentHash;
   
   if (!paymentHash) {
     throw createError({

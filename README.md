@@ -1,4 +1,4 @@
-# BitUPI - Bitcoin to UPI Exchange Platform
+# LN2UPI - Bitcoin to UPI Exchange Platform
 
 A serverless, anonymous P2P platform that facilitates Bitcoin Lightning Network payments to UPI transfers in India. The platform operates without user accounts, persistent data storage, or any KYC requirements.
 

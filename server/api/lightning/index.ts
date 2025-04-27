@@ -1,9 +1,20 @@
 import { defineEventHandler, readBody, createError, getQuery } from 'h3';
-import { generateInvoice, checkPaymentStatus, createWithdrawLink, handlePaymentConfirmation } from '../lightning-payment';
+import { generateInvoice, checkPaymentStatus, createWithdrawLink, handlePaymentConfirmation, associatePaymentWithOrder } from '../../lightning-payment';
 
+/**
+ * Unified Lightning Network API
+ * 
+ * Implements RESTful API for Lightning Network functionality:
+ * - GET /api/lightning?action=status - Check connection status
+ * - GET /api/lightning?action=check&paymentHash=xyz - Check payment status
+ * - POST /api/lightning - Create invoice (with action=invoice in body)
+ * - POST /api/lightning - Check payment (with action=check in body)
+ * - POST /api/lightning - Create withdraw link (with action=withdraw in body)
+ * - POST /api/lightning - Handle callbacks (with action=callback in body)
+ */
 export default defineEventHandler(async (event) => {
   // Get HTTP method
-  const method = readMethod(event);
+  const method = event.method || 'GET';
 
   // Get query parameters
   const query = getQuery(event);
@@ -14,7 +25,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
 
     // Create invoice
-    if (action === 'invoice') {
+    if (action === 'invoice' || body.action === 'invoice') {
       // Validate inputs
       const amountParam = body.amount;
       if (!amountParam || isNaN(parseInt(String(amountParam)))) {
@@ -27,10 +38,17 @@ export default defineEventHandler(async (event) => {
       try {
         // Generate a Lightning invoice
         const satAmount = parseInt(String(amountParam));
-        const memo = body.memo || 'BitUPI Payment';
+        const memo = body.memo || 'LN2UPI Payment';
         const orderId = body.orderId;
 
         const result = await generateInvoice(satAmount, memo);
+        
+        // If an order ID is provided, associate the payment with that order
+        if (orderId) {
+          // Associate the payment hash with the order ID
+          associatePaymentWithOrder(result.paymentHash, String(orderId));
+          console.log(`Order ${orderId} is waiting for payment of ${satAmount} sats`);
+        }
 
         return {
           success: true,
@@ -51,7 +69,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check payment status
-    if (action === 'check') {
+    if (action === 'check' || body.action === 'check') {
       if (!body.paymentHash) {
         throw createError({
           statusCode: 400,
@@ -81,7 +99,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create withdraw link
-    if (action === 'withdraw') {
+    if (action === 'withdraw' || body.action === 'withdraw') {
       if (!body.amount || isNaN(parseInt(String(body.amount)))) {
         throw createError({
           statusCode: 400,
@@ -92,7 +110,7 @@ export default defineEventHandler(async (event) => {
       try {
         // Generate a Lightning LNURL withdraw link
         const satAmount = parseInt(String(body.amount));
-        const title = body.title || 'BitUPI Withdrawal';
+        const title = body.title || 'LN2UPI Withdrawal';
 
         // Get minimum amount or default to 1% of total amount, with a minimum of 1 sat
         let minAmount;
@@ -123,11 +141,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // Handle callback notifications 
-    if (action === 'callback') {
+    if (action === 'callback' || body.action === 'callback') {
       try {
-        // Get the webhook payload
-        const body = await readBody(event);
-
         if (!body || !body.payment_hash) {
           console.error('Invalid callback payload received:', body);
           return {
@@ -158,7 +173,7 @@ export default defineEventHandler(async (event) => {
     // Unknown action
     throw createError({
       statusCode: 400,
-      message: `Unknown action: ${action}`
+      message: `Unknown action: ${action || body.action || 'none'}`
     });
   }
 
@@ -202,7 +217,7 @@ export default defineEventHandler(async (event) => {
         return {
           success: true,
           connected: true,
-          provider: 'LNbits',
+          provider: 'OpenLN/LNbits',
           timestamp: new Date().toISOString()
         };
       } catch (error) {
@@ -218,7 +233,7 @@ export default defineEventHandler(async (event) => {
     // Default response for unknown actions
     return {
       success: false,
-      message: 'Unknown action or method. Use POST with action=invoice|check|withdraw|callback'
+      message: 'Unknown action or method. Use with action=status|check or POST with action=invoice|check|withdraw|callback'
     };
   }
 

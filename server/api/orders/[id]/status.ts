@@ -1,10 +1,24 @@
-import { defineEventHandler, getQuery, createError } from 'h3';
-import { store } from '../index';
-import { parseTrackingToken } from '../utils/security';
+import { defineEventHandler, getQuery, createError, getRouterParam } from 'h3';
+import { store } from '../../../index';
+import { parseTrackingToken } from '../../../utils/security';
 
+/**
+ * Order Status API
+ * 
+ * GET /api/orders/:id/status?token=xyz - Get order status with tracking token
+ */
 export default defineEventHandler(async (event) => {
+  // Get order ID from URL and token from query
+  const orderId = getRouterParam(event, 'id');
   const query = getQuery(event);
   const { token } = query;
+
+  if (!orderId) {
+    throw createError({
+      statusCode: 400,
+      message: 'Order ID is required'
+    });
+  }
 
   if (!token) {
     throw createError({
@@ -20,6 +34,14 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 401,
       message: 'Invalid tracking token'
+    });
+  }
+
+  // Verify the order ID in the token matches the requested order ID
+  if (tokenData.id !== orderId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Token does not match the requested order'
     });
   }
 
