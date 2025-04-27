@@ -60,13 +60,13 @@ onMounted(() => {
                    :class="{ 'text-primary': $route.path === '/' }">
             Home
           </NuxtLink>
-          <NuxtLink to="/send" class="px-4 py-2 rounded-lg text-text-light font-medium transition-all hover:text-primary" 
-                   :class="{ 'text-primary': $route.path === '/send' }">
-            Send to UPI
+          <NuxtLink to="/buy" class="px-4 py-2 rounded-lg text-text-light font-medium transition-all hover:text-primary" 
+                   :class="{ 'text-primary': $route.path === '/buy' }">
+            Buy Bitcoin
           </NuxtLink>
-          <NuxtLink to="/receive" class="px-4 py-2 rounded-lg text-text-light font-medium transition-all hover:text-secondary" 
-                   :class="{ 'text-secondary': $route.path === '/receive' }">
-            Receive Sats
+          <NuxtLink to="/earn" class="px-4 py-2 rounded-lg text-text-light font-medium transition-all hover:text-secondary" 
+                   :class="{ 'text-secondary': $route.path === '/earn' }">
+            Earn Sats
           </NuxtLink>
           
           <!-- Dark Mode Toggle -->
@@ -82,11 +82,11 @@ onMounted(() => {
         
         <!-- Mobile menu -->
         <div class="flex md:hidden space-x-3 items-center">
-          <NuxtLink to="/send" class="btn-primary py-2 px-3 text-sm">
-            <span class="relative z-10">Send</span>
+          <NuxtLink to="/buy" class="btn-primary py-2 px-3 text-sm">
+            <span class="relative z-10">Buy</span>
           </NuxtLink>
-          <NuxtLink to="/receive" class="btn-secondary py-2 px-3 text-sm">
-            <span class="relative z-10">Receive</span>
+          <NuxtLink to="/earn" class="btn-secondary py-2 px-3 text-sm">
+            <span class="relative z-10">Earn</span>
           </NuxtLink>
           
           <!-- Mobile Dark Mode Toggle -->
