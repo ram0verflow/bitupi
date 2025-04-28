@@ -130,8 +130,8 @@
         </div>
       </div>
       
-      <!-- Receipt Display (for buyers only) -->
-      <div v-if="orderData.userType === 'buyer' && orderData.receipt" class="bg-bg-input rounded-lg p-4">
+      <!-- Receipt Display (for payers only) -->
+      <div v-if="orderData.userType === 'payer' && orderData.receipt" class="bg-bg-input rounded-lg p-4">
         <h4 class="font-medium mb-3">Payment Receipt</h4>
         <div class="mb-2 text-sm">
           <span class="text-text-muted">Uploaded:</span>
@@ -150,8 +150,8 @@
         </div>
       </div>
       
-      <!-- Refund Information (for buyers) -->
-      <div v-if="orderData.userType === 'buyer' && canRefund" class="bg-bg-input rounded-lg p-4">
+      <!-- Refund Information (for payers) -->
+      <div v-if="orderData.userType === 'payer' && canRefund" class="bg-bg-input rounded-lg p-4">
         <h4 class="font-medium mb-3">Refund Options</h4>
         <p class="text-sm text-text-muted mb-3">
           You can request a refund for this order if it hasn't been processed yet.
@@ -215,7 +215,7 @@ const orderData = ref(null);
 const isLoading = ref(false);
 const errorMessage = ref('');
 const refundWallet = ref('');
-const buyerKey = ref(localStorage.getItem('bitupi_buyer_key') || '');
+const buyerKey = ref(localStorage.getItem('bitupi_payer_key') || localStorage.getItem('bitupi_buyer_key') || '');
 const refundKey = ref(localStorage.getItem('bitupi_refund_key') || '');
 
 // Status-based styling classes and messages
@@ -249,7 +249,7 @@ const canRefund = computed(() => {
   if (!orderData.value) return false;
   
   return (
-    orderData.value.userType === 'buyer' &&
+    orderData.value.userType === 'payer' &&
     ['pending', 'processing'].includes(orderData.value.status) &&
     buyerKey.value && 
     refundKey.value
@@ -318,11 +318,11 @@ async function loadOrderFromToken() {
         tokenInput.value = '';
       }
       
-      // If the order is for a buyer and we don't have keys saved, save them if included in response
-      if (data.userType === 'buyer') {
+      // If the order is for a payer and we don't have keys saved, save them if included in response
+      if (data.userType === 'payer') {
         if (data.buyerKey && !buyerKey.value) {
           buyerKey.value = data.buyerKey;
-          localStorage.setItem('bitupi_buyer_key', data.buyerKey);
+          localStorage.setItem('bitupi_payer_key', data.buyerKey);
         }
         
         if (data.refundKey && !refundKey.value) {

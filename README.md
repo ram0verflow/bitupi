@@ -4,8 +4,8 @@ A serverless, anonymous P2P platform that facilitates Bitcoin Lightning Network 
 
 ## Features
 
-- **Buy Bitcoin with UPI**: Upload your UPI QR code and receive Bitcoin via Lightning Network
-- **Earn Bitcoin by Processing UPI Payments**: Help others buy Bitcoin and earn a profit share
+- **Pay with Bitcoin to UPI**: Upload your UPI QR code and send Bitcoin via Lightning Network
+- **Earn Bitcoin by Processing UPI Payments**: Help others pay with Bitcoin and earn a profit share
 - **No Accounts or KYC**: Completely anonymous platform with no persistent data storage
 - **Real-time Updates**: Live order status and marketplace updates
 - **India-centric Design**: Built specifically for Indian users with UPI integration

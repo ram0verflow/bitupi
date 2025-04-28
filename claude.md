@@ -7,17 +7,17 @@ Build a serverless, anonymous P2P platform that facilitates Bitcoin Lightning Ne
 ## Core Features
 
 ### Landing Page
-- Simple, clean interface with two primary options: "Buy" and "Earn"
+- Simple, clean interface with two primary options: "Pay" and "Earn"
 - Brief explanation of the service
 - No login/signup required
 
-### Buy Bitcoin Flow
+### Pay with Bitcoin Flow
 1. User specifies INR amount
 2. User uploads UPI QR code (parse and sanitize to avoid privacy leaks)
 3. System calculates equivalent Lightning Network sats + exchange fee + service fee
 4. Order is created and published to the Earn marketplace
-5. Buyer waits for an Earner to process payment
-6. Buyer approves receipt after payment confirmation
+5. Payer waits for an Earner to process payment
+6. Payer approves receipt after payment confirmation
 7. Lightning Network payment is released
 
 ### Earn Bitcoin Flow
@@ -86,7 +86,7 @@ ln2upi/
 │   └── default.vue
 ├── pages/
 │   ├── index.vue  # Landing page
-│   ├── buy.vue    # Buy Bitcoin flow
+│   ├── pay.vue    # Pay with Bitcoin flow
 │   └── earn.vue   # Earn Bitcoin flow
 ├── plugins/
 │   └── socket.client.ts

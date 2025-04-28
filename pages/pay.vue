@@ -1,5 +1,5 @@
-<!-- This file is a renamed copy of the former send.vue -->
-<!-- Please update references to this file in other components -->
+<!-- This file enables paying from BTC to UPI -->
+<!-- Renamed from buy.vue to pay.vue for better clarity -->
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
@@ -225,7 +225,7 @@ async function createOrder() {
       }
       
       if (data.buyerKey) {
-        localStorage.setItem('bitupi_buyer_key', data.buyerKey);
+        localStorage.setItem('bitupi_payer_key', data.buyerKey);
       }
       
       if (data.refundKey) {
@@ -371,10 +371,10 @@ async function checkPaymentStatus() {
   }
 }
 
-// Ping server to update buyer status
-async function pingAsBuyer() {
+// Ping server to update payer status
+async function pingAsPayer() {
   try {
-    await fetch('/api/ping?type=buyer'); // Keep using /api/ping as it's a simple utility endpoint
+    await fetch('/api/ping?type=payer'); // Keep using /api/ping as it's a simple utility endpoint
   } catch (error) {
     console.error('Failed to ping server:', error);
   }
@@ -384,20 +384,20 @@ async function pingAsBuyer() {
 let pingInterval = null;
 let visibilityHandler = null;
 
-function startBuyerPing() {
+function startPayerPing() {
   // Ping immediately
-  pingAsBuyer();
+  pingAsPayer();
   
-  // Set up more frequent pinging to ensure accurate buyer counts
+  // Set up more frequent pinging to ensure accurate payer counts
   // Ping every 30 seconds while on the send page
-  pingInterval = setInterval(pingAsBuyer, 30 * 1000);
+  pingInterval = setInterval(pingAsPayer, 30 * 1000);
   
   // Additionally set up a visibility change event listener to ping
   // when the user returns to the page after having it in the background
   if (typeof document !== 'undefined') {
     visibilityHandler = () => {
       if (document.visibilityState === 'visible') {
-        pingAsBuyer();
+        pingAsPayer();
       }
     };
     document.addEventListener('visibilitychange', visibilityHandler);
@@ -411,8 +411,8 @@ onMounted(() => {
   // Enable random insights feature
   fetchRandomInsight();
   
-  // Register as buyer and start periodic pinging
-  startBuyerPing();
+  // Register as payer and start periodic pinging
+  startPayerPing();
 });
 
 onUnmounted(() => {
@@ -437,7 +437,7 @@ onUnmounted(() => {
     document.removeEventListener('visibilitychange', visibilityHandler);
   }
   
-  // Notify server we're no longer a buyer when leaving the page
+  // Notify server we're no longer a payer when leaving the page
   if (process.client) {
     try {
       fetch('/api/ping?type=visitor'); // Keep using /api/ping as it's a simple utility endpoint
