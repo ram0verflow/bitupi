@@ -51,25 +51,36 @@ export default defineNuxtConfig({
 
   // API routes
   serverHandlers: [
+    // Lightning API endpoints
     {
-      route: '/api/exchange-rate',
-      handler: '~/server/api/exchange-rate.ts'
+      route: '/api/lightning',
+      handler: '~/server/api/lightning/index.ts'
     },
     {
-      route: '/api/lightning-invoice',
-      handler: '~/server/api/lightning-invoice.ts'
+      route: '/api/lightning/invoice',
+      handler: '~/server/api/lightning/invoice.ts'
     },
     {
-      route: '/api/process-qr',
-      handler: '~/server/api/process-qr.ts'
+      route: '/api/lightning/callback',
+      handler: '~/server/api/lightning/callback.ts'
     },
     {
-      route: '/api/create-order',
-      handler: '~/server/api/create-order.ts'
+      route: '/api/lightning/payment/:hash',
+      handler: '~/server/api/lightning/payment/index.ts'
     },
+    {
+      route: '/api/lightning/withdraw',
+      handler: '~/server/api/lightning/withdraw.ts'
+    },
+    
+    // Order API endpoints
     {
       route: '/api/orders',
-      handler: '~/server/api/orders.ts'
+      handler: '~/server/api/orders/index.ts'
+    },
+    {
+      route: '/api/orders/:id',
+      handler: '~/server/api/orders/[id]/index.ts'
     },
     {
       route: '/api/orders/:id/claim',
@@ -80,13 +91,45 @@ export default defineNuxtConfig({
       handler: '~/server/api/orders/[id]/receipt.ts'
     },
     {
-      route: '/api/random-insight',
-      handler: '~/server/api/random-insight.ts'
+      route: '/api/orders/:id/refund',
+      handler: '~/server/api/orders/[id]/refund.ts'
     },
+    {
+      route: '/api/orders/:id/approve',
+      handler: '~/server/api/orders/[id]/approve.ts'
+    },
+    {
+      route: '/api/orders/:id/status',
+      handler: '~/server/api/orders/[id]/status.ts'
+    },
+    
+    // Utility API endpoints
+    {
+      route: '/api/utils/exchange-rate',
+      handler: '~/server/api/utils/exchange-rate.ts'
+    },
+    {
+      route: '/api/utils/process-qr',
+      handler: '~/server/api/utils/process-qr.ts'
+    },
+    {
+      route: '/api/utils/random-insight',
+      handler: '~/server/api/utils/random-insight.ts'
+    },
+    
+    // Statistics API endpoint
+    {
+      route: '/api/stats',
+      handler: '~/server/api/stats/index.ts'
+    },
+    
+    // Simple ping endpoint
     {
       route: '/api/ping',
       handler: '~/server/api/ping.ts'
     },
+    
+    // Server-Sent Events endpoints
     {
       route: '/api/sse/exchange-rate',
       handler: '~/server/api/sse/exchange-rate.ts'

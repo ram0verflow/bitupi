@@ -283,7 +283,23 @@ async function loadOrderFromToken() {
   errorMessage.value = '';
   
   try {
-    const response = await fetch(`/api/order-status?token=${encodeURIComponent(token)}`);
+    // Extract order ID from token if possible
+    const tokenParts = token.split('.');
+    let orderIdFromToken = 'unknown';
+    
+    if (tokenParts.length >= 3) {
+      try {
+        const decodedPayload = JSON.parse(atob(tokenParts[1]));
+        if (decodedPayload && decodedPayload.id) {
+          orderIdFromToken = decodedPayload.id;
+        }
+      } catch (e) {
+        console.error('Error parsing token:', e);
+      }
+    }
+    
+    const apiUrl = `/api/orders/${orderIdFromToken}/status?token=${encodeURIComponent(token)}`;
+    const response = await fetch(apiUrl);
     
     if (!response.ok) {
       const errorData = await response.json();

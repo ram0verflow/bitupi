@@ -5,7 +5,7 @@ import { $fetch } from 'ohmyfetch';
 const LNBITS_URL = process.env.LNBITS_URL || 'https://legend.lnbits.com';
 const LNBITS_ADMIN_KEY = process.env.LNBITS_ADMIN_KEY; // For sending payments, creating withdraw links
 const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY; // For creating invoices, checking payment status
-const CALLBACK_URL = process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/lightning-callback` : null;
+const CALLBACK_URL = process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/api/lightning/callback` : null;
 
 // Define interfaces for Lightning responses
 export interface LNbitsInvoice {

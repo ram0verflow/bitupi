@@ -76,7 +76,7 @@ const isFormValid = computed(() => {
 // Get current BTC to INR exchange rate
 async function fetchExchangeRate() {
   try {
-    const response = await fetch('/api/exchange-rate');
+    const response = await fetch('/api/utils/exchange-rate');
     
     if (!response.ok) {
       throw new Error('Failed to fetch exchange rate');
@@ -102,7 +102,7 @@ async function fetchRandomInsight() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
     
-    const response = await fetch('/api/random-insight', {
+    const response = await fetch('/api/utils/random-insight', {
       signal: controller.signal,
       headers: {
         'Cache-Control': 'no-cache'
@@ -340,7 +340,7 @@ async function checkPaymentStatus() {
   checkingPayment.value = true;
   
   try {
-    const response = await fetch(`/api/lightning?action=check&paymentHash=${paymentHash.value}`, {
+    const response = await fetch(`/api/lightning/payment/${paymentHash.value}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -374,7 +374,7 @@ async function checkPaymentStatus() {
 // Ping server to update buyer status
 async function pingAsBuyer() {
   try {
-    await fetch('/api/ping?type=buyer');
+    await fetch('/api/ping?type=buyer'); // Keep using /api/ping as it's a simple utility endpoint
   } catch (error) {
     console.error('Failed to ping server:', error);
   }
@@ -440,7 +440,7 @@ onUnmounted(() => {
   // Notify server we're no longer a buyer when leaving the page
   if (process.client) {
     try {
-      fetch('/api/ping?type=visitor');
+      fetch('/api/ping?type=visitor'); // Keep using /api/ping as it's a simple utility endpoint
     } catch (error) {
       console.error('Failed to ping as visitor on unmount:', error);
     }
